@@ -1,17 +1,39 @@
-<html>
-<head>
-  <style>
-    body {
-      padding: 20px;
-    }
-  </style>
-  <script src="button.js"></script>
-</head>
-<body>
-<div id="wrapper">
-  <div id="dummy">
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+<script src="move-to-bugzilla.js"></script>
+<header>
+  <h1>Move to Bugzilla</h1>
+</header>
+<div id="initial">
+  <p>Not a web-bug
+</div>
+<div id="move-form">
+  <div class="form">
+    <label for=summary>Summary: </label><input id="summary">
+    <label for=description>Description:</label><textarea id="description" rows="10" cols="80"></textarea>
+    <label for=url>URL:</label> <input id="url">
+    <label for=priority>Priority:</label>
+    <select id="priority">
+      <option>--</option>
+      <option>P1</option>
+      <option>P2</option>
+      <option>P3</option>
+    </select>
+    <label for=severity>Severity:</label>
+    <select id="severity">
+      <option>--</option>
+      <option>S2</option>
+      <option>S3</option>
+      <option>S4</option>
+    </select>
+    <label for=keywords>Keywords: </label><input id="keywords">
+    <div></div>
+    <div class="actions">
+      <button id="move" class="primary" disabled>Move bug</button>
+    </div>
   </div>
 </div>
-<script src="add-button-action.js"></script>
-</body>
-</html>
+<div id="bug">
+  <p>Created <a id="bug-link" href="https://bugzilla.mozilla.org/show_bug.cgi?id="></a>
+</div>

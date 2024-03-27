@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
-  "name": "Move to Bugzilla.",
-  "version": "1.0.10",
+  "name": "Site Issue Triage",
+  "version": "0.1",
   "icons": {
     "48": "icons/exchange.svg",
     "96": "icons/exchange.svg"
@@ -9,13 +9,6 @@
   "options_ui": {
     "page": "options.html"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://github.com/*"],
-      "run_at": "document_idle",
-      "js": ["button.js", "add-button.js"]
-    }
-  ],
   "background": {
     "scripts": ["background.js"]
   },
@@ -24,13 +17,13 @@
     "default_icon": "icons/exchange.svg",
     "default_title": "Move To Bugzilla",
     "default_popup": "move.html",
-    "show_matches": ["https://github.com/*/issues/*"],
-    "hide_matches": ["https://github.com/*/issues"]
+    "show_matches": ["https://github.com/webcompat/web-bugs/issues/*"],
+    "hide_matches": ["https://github.com/webcompat/web-bugs/issues"]
   },
   "permissions": ["storage", "activeTab"],
   "browser_specific_settings": {
     "gecko": {
-      "id": "move-to-bugzilla@sferro.dev"
+      "id": "site-triage@hoppipolla.co.uk"
     }
   }
 }

@@ -22,38 +22,41 @@ async function ensureUser() {
 
 browser.runtime.onMessage.addListener((data, sender) => {
   switch (data.type) {
-    case "move-to-bugzilla": {
-      moveToBugzilla(data);
+    case "get-issue-data": {
+      return getIssueData(data);
       break;
     }
 
-    case "get-components": {
-      return getComponents(data);
+    case "move-to-bugzilla": {
+      return moveToBugzilla(data);
       break;
     }
   }
 });
 
-async function getComponents(data) {
-  const { product } = data;
-  const result = await fetch(
-      `https://bugzilla.mozilla.org/rest/product?names=${product}`);
-  const productData = await result.json();
-  return productData.products[0].components.map(c => c.name);
-}
 
 async function githubIssueApi({ issue, path = '', data, method = 'GET' }) {
+  console.log(issue);
   const body = {
-    ... issue,
+    owner: issue.owner,
+    repo: issue.repo,
+    issue_number: issue.issueId,
     ... data,
   };
+  console.log(body);
 
-  const user = await ensureUser();
+  if (method !== "GET") {
+    const user = await ensureUser();
+  }
 
   const request = {
     method,
-    headers: {'Authorization': `token ${user.github_key}`},
+    headers: {}
   };
+
+  if (user !== null) {
+    request.headers.Authorization = `token ${user.github_key}`;
+  }
 
   if (method === 'POST') {
     request.body = JSON.stringify(body);
@@ -61,7 +64,7 @@ async function githubIssueApi({ issue, path = '', data, method = 'GET' }) {
 
   const response = await fetch(
     `https://api.github.com/repos/${issue.owner}/${issue.repo}`
-    + `/issues/${issue.issue_number}${path}`,
+    + `/issues/${issue.issueId}${path}`,
     request
   );
 
@@ -74,71 +77,47 @@ async function githubIssueApi({ issue, path = '', data, method = 'GET' }) {
   return result;
 }
 
-function bugzillaDescription(githubData) {
-  // Add ">" to each line.
-  const quote = (githubData.body || "")
-    .split('\n')
-    .map(s => '> ' + s)
-    .join('\n');
-  return `From github: ${githubData.html_url}.\n\n`
-    + `${quote}\n\n`
-    + `Change performed by the [Move to Bugzilla add-on](`
-    +    `https://addons.mozilla.org/en-US/firefox/addon/move-to-bugzilla/).`;
+async function getIssueData(data) {
+  return await githubIssueApi({
+    issue: data
+  });
+
 }
 
-// These are IDs for GitHub labels that corresponds to a "defect"
-const DEFECT_TYPE_LABEL_IDS = new Set([
-  875862810
-]);
-
-// These are IDs for GitHub labels that corresponds to a "enhancement"
-const ENHANCEMENT_TYPE_LABEL_IDS = new Set([
-  877027717
-]);
-
-function bugzillaType(githubData) {
-  if (!("labels" in githubData)) {
-    return "defect";
-  }
-  for (label of githubData.labels) {
-    if (DEFECT_TYPE_LABEL_IDS.has(label.id)) {
-      return "defect";
+async function addGitHubComment(issue, comment) {
+  return await githubIssueApi({
+    issue,
+    method: 'POST',
+    path: '/comments',
+    data: {
+      body: comment
     }
-    if (ENHANCEMENT_TYPE_LABEL_IDS.has(label.id)) {
-      return "enhancement";
-    }
-  }
-  return "defect";
+  });
 }
 
-async function moveToBugzilla(data) {
-  const { github, component, product, opSys, severity, priority, bugType } = data;
+async function createBugzillaBug(data) {
+  const { component, product, opSys, severity, priority, bugType, summary, description, keywords, url } = data;
 
   const user = await ensureUser();
-
-  const issue = {
-    owner: github.owner,
-    repo: github.repo,
-    issue_number: github.issueId,
-  };
-
-  const githubData = await githubIssueApi({
-    issue
-  });
 
   const bugzillaRequest = {
     api_key: user.bugzilla_key,
     product,
     component,
-    type: bugType || bugzillaType(githubData),
+    type: bugType,
     version: "unspecified",
     op_sys: opSys,
     platform: "unspecified",
     severity,
     priority,
-    summary: githubData.title,
-    description: bugzillaDescription(githubData),
+    summary,
+    description,
+    url,
   };
+
+  if (keywords) {
+    bugzillaRequest.keywords = keywords;
+  }
 
   // Create bug in Bugzilla first
   const bugzillaResponse = await fetch('https://bugzilla.mozilla.org/rest/bug', {
@@ -150,28 +129,28 @@ async function moveToBugzilla(data) {
   const bugzillaId = response.id;
 
   if (!bugzillaId) {
+    console.error("Could not create bugzilla bug", response);
     throw new Error(`Could not create bugzilla bug: ${JSON.stringify(response)}`);
   }
+  return bugzillaId;
+}
 
-  // Add comment
-  await githubIssueApi({
-    issue,
-    method: 'POST',
-    path: '/comments',
-    data: {
-      body: `Moved to bugzilla: `
-        + `https://bugzilla.mozilla.org/show_bug.cgi?id=${bugzillaId}\n\n`
-        + `Change performed by the [Move to Bugzilla add-on](`
-        +     `https://addons.mozilla.org/en-US/firefox/addon/move-to-bugzilla/).`,
-    }
-  });
+async function moveToBugzilla(data) {
+  const { bugData, githubData } = data;
+  const bugzillaId = await createBugzillaBug(bugData);
+  const comment = `Moved to bugzilla: `
+        + `https://bugzilla.mozilla.org/show_bug.cgi?id=${bugzillaId}\n`;
+  await addGitHubComment(githubData, comment);
+  if (githubData.close) {
+    // Close issue
+    await githubIssueApi({
+      issue: githubData,
+      method: 'POST',
+      data: {
+        state: "closed",
+      },
+    });
+  }
+  return { bugzillaId };
 
-  // Close issue
-  await githubIssueApi({
-    issue,
-    method: 'POST',
-    data: {
-      state: "closed",
-    },
-  });
 }

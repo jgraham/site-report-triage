@@ -1,0 +1,153 @@
+/* Stylesheet based on bugzilla styles */
+
+:root {
+    --font-family-sans-serif: sans-serif;
+    --font-family-monospace: 'Menlo', 'Noto Mono', monospace;
+    --foreground-color: rgb(40, 41, 42);
+    --header-background-color: rgb(50, 51, 52);
+    --background-color: rgb(235, 236, 237);
+    --control-background-color: rgb(255, 255, 255);
+    --control-border-color: rgb(200, 201, 202);
+    --primary-button-foreground-color: rgb(255, 255, 255);
+    --primary-button-background-color: rgb(0, 122, 204);
+    --hovered-primary-button-background-color: rgb(0, 107, 179);
+    --pressed-primary-button-background-color: rgb(0, 92, 153);
+    --button-background-color: rgb(230, 231, 232);
+    --button-border-color: rgb(210, 211, 212);
+    --hovered-button-background-color: rgb(220, 221, 222);
+    --pressed-button-background-color: rgb(200, 201, 202);
+    --link-text-color: rgb(0, 108, 191);
+    --hovered-link-text-color: rgb(0, 94, 166);
+
+    font-size: 13px;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    :root {
+        --background-color: rgb(30, 31, 32);
+        --foreground-color: rgb(210, 211, 212);
+        --foreground-color: rgb(210, 211, 212);
+        --control-background-color: rgb(35, 36, 37);
+        --control-border-color: rgb(60, 61, 62);
+        --button-background-color: rgb(70, 71, 72);
+        --button-border-color: rgb(70, 71, 72);
+        --hovered-buttonbackground-color: rgb(60, 61, 62);
+        --pressed-button-background-color: rgb(40, 41, 42);
+        --link-text-color: rgb(26, 168, 245);
+        --hovered-link-text-color: rgb(24, 151, 219);
+    }
+}
+
+:link {
+    color: var(--link-text-color);
+    text-decoration: none;
+}
+
+:visited {
+    color: var(--link-text-color);
+    text-decoration: none;
+}
+
+:link:hover {
+    color: var(--hovered-link-text-color);
+}
+
+body {
+    color: var(--foreground-color);
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    font-family: var(--font-family-sans-serif);
+    min-width: 50rem;
+}
+
+header {
+    display: grid;
+    align-items: center;
+    width: 100%;
+    background-color: var(--header-background-color);
+}
+
+h1 {
+    margin: 0;
+    margin-left: 1em;
+    padding: 0;
+    font-size: 20px;
+}
+
+label {
+    text-align: right;
+    margin-bottom: 0.5rem;
+}
+
+input, select, textarea {
+    color: var(--control-foreground-color);
+    background-color: var(--control-background-color);
+    font-family: var(--font-family-monospace);
+    width: 100%;
+    max-width: 40rem;
+    border: 1px solid var(--control-border-color);
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+textarea {
+    font-family: var(--font-family-sans-serif);
+    font-size: 15px;
+}
+
+button {
+    color: var(--control-foreground-color);
+    background-color: var(--button-background-color);
+    border-color: var(--button-border-color);
+    border-radius: var(4px);
+    border: 1px solid var(--button-border-color);
+    padding: 6px 12px;
+}
+
+button:hover {
+    background-color: var(--hovered-button-background-color);
+}
+
+button:active {
+    background-color: var(--pressed-button-background-color);
+}
+
+button.primary {
+    font-weight: 500;
+    color: var(--primary-button-foreground-color);
+    background-color: var(--primary-button-background-color);
+}
+
+button.primary:hover {
+    background-color: var(--hovered-primary-button-background-color);
+}
+
+button.primary:active {
+    background-color: var(--pressed-primary-button-background-color);
+}
+
+body > div {
+    margin: 1em;
+}
+
+#priority, #severity {
+    width: 4em;
+}
+
+.form {
+    display: grid;
+    grid-template-columns: 10rem auto;
+    gap: 8px;
+}
+
+.actions {
+    padding-top: 1rem;
+    max-width: 40rem;
+}
+
+.actions > button {
+    float: right;
+}

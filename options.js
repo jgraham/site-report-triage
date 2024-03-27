@@ -6,7 +6,7 @@ async function init() {
   const data = await browser.storage.local.get();
   github_key.value = data.github_key || "";
   bugzilla_key.value = data.bugzilla_key || "";
-  document.querySelector('form').addEventListener('submit', e => {
+  document.getElementById("save").addEventListener('click', e => {
     e.preventDefault();
     browser.storage.local.set({
       github_key: github_key.value,
