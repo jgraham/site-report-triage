@@ -96,7 +96,7 @@ async function addGitHubComment(issue, comment) {
 }
 
 async function createBugzillaBug(data) {
-  const { component, product, opSys, severity, priority, bugType, summary, description, keywords, url } = data;
+  const { component, product, opSys, severity, priority, bugType, summary, description, keywords, url, dependsOn = [], userStory = "" } = data;
 
   const user = await ensureUser();
 
@@ -113,6 +113,8 @@ async function createBugzillaBug(data) {
     summary,
     description,
     url,
+    depends_on: dependsOn,
+    cf_user_story: userStory,
   };
 
   if (keywords) {
@@ -143,13 +145,17 @@ async function moveToBugzilla(data) {
   await addGitHubComment(githubData, comment);
   if (githubData.close) {
     // Close issue
-    await githubIssueApi({
-      issue: githubData,
-      method: 'POST',
-      data: {
-        state: "closed",
-      },
-    });
+    try {
+      await githubIssueApi({
+        issue: githubData,
+        method: 'POST',
+        data: {
+          state: "closed",
+        },
+      });
+    } catch(e) {
+      console.error("Failed to close GH issue", e);
+    }
   }
   return { bugzillaId };
 

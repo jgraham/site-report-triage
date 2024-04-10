@@ -37,9 +37,10 @@ class Sections {
 }
 
 class Control {
-  constructor(id, getDefaultValue) {
+  constructor(id, options = {}) {
+    const { getDefaultValue = null } = options;
     this.elem = document.getElementById(id);
-    this.getDefaultValue = getDefaultValue.bind(this);
+    this.getDefaultValue = getDefaultValue ? getDefaultValue.bind(this) : null;
   }
 
   get value() {
@@ -167,11 +168,13 @@ async function populateMoveForm(sections, pathname) {
   }
 
   const controls = {
-    summary: new Control("summary", issueData => issueData.title),
-    description: new Control("description", bugzillaDescription),
-    url: new Control("url", issueData => issueData.parsedBody.url),
-    priority: new Control("priority", getDiagnosisPriority),
-    keywords: new Control("keywords", getKeywords),
+    summary: new Control("summary", {getDefaultValue: issueData => issueData.title}),
+    description: new Control("description", {getDefaultValue: bugzillaDescription}),
+    url: new Control("url", {getDefaultValue: issueData => issueData.parsedBody.url}),
+    priority: new Control("priority", {getDefaultValue: getDiagnosisPriority}),
+    keywords: new Control("keywords", {getDefaultValue: getKeywords}),
+    userStory: new Control("user-story"),
+    dependsOn: new Control("depends-on"),
   };
 
   const issueData = await browser.runtime.sendMessage({
@@ -182,20 +185,25 @@ async function populateMoveForm(sections, pathname) {
   issueData.parsedBody = parseIssueBody(issueData);
 
   for (let control of Object.values(controls)) {
-    control.value = control.getDefaultValue(issueData);
+    console.log(control, control.getDefaultValue);
+    if (control.getDefaultValue !== null) {
+      control.value = control.getDefaultValue(issueData);
+    }
   };
 
   const moveButton = document.getElementById("move");
 
   moveButton.addEventListener("click", async e => {
     moveButton.disabled = true;
-   const bugData = {
-     summary: controls.summary.value,
-     description: controls.description.value,
-     url: controls.url.value,
-     priority: controls.priority.value,
-     keywords: controls.keywords.value.split(",").map(x => x.trim()),
-   };
+    const bugData = {
+      summary: controls.summary.value,
+      description: controls.description.value,
+      url: controls.url.value,
+      priority: controls.priority.value,
+      keywords: controls.keywords.value.split(",").map(x => x.trim()),
+      userStory: controls.userStory.value,
+      dependsOn: controls.dependsOn.value.split(",").map(x => x.trim()),
+    };
     let { bugzillaId } = await moveToBugzilla(bugData, issue);
     const bugLink = document.getElementById("bug-link");
     bugLink.href += bugzillaId;
