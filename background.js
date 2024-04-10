@@ -1,5 +1,40 @@
 let user = null;
 
+const pages = [
+  {
+    page: "move.html",
+    show_matches: ["^https://github\.com/webcompat/web-bugs/issues/.*"]
+  },
+   {
+    page: "triage-report.html",
+    show_matches: ["^https://bugzilla\.mozilla.org/show_bug\.cgi\?"]
+   },
+];
+
+function pageActionClicked(tab) {
+  const url = new URL(tab.url);
+  const path = getPopupPath(url);
+  console.log(path);
+  browser.pageAction.setPopup({tabId: tab.id, popup:path});
+  browser.pageAction.openPopup();
+}
+
+function getPopupPath(url) {
+  for (const page of pages) {
+    const matchUrls = page.show_matches ?? [];
+    for (const matchUrl of matchUrls) {
+      if ((new RegExp(matchUrl)).test(url.href)) {
+        return page.page;
+      }
+    }
+  }
+  console.error(`Missing popup handler for ${url.href}`);
+  return "about:blank";
+}
+
+browser.pageAction.onClicked.addListener(pageActionClicked);
+
+
 async function ensureUser() {
   if (user) {
     return user;
@@ -22,15 +57,14 @@ async function ensureUser() {
 
 browser.runtime.onMessage.addListener((data, sender) => {
   switch (data.type) {
-    case "get-issue-data": {
+    case "get-issue-data":
       return getIssueData(data);
-      break;
-    }
-
-    case "move-to-bugzilla": {
+    case "move-to-bugzilla":
       return moveToBugzilla(data);
-      break;
-    }
+    case "get-tranco-rank":
+      return trancoRank(data);
+    default:
+      throw new Error(`Unrecognised conent background script message: ${data.type}`);
   }
 });
 
@@ -79,7 +113,6 @@ async function getIssueData(data) {
   return await githubIssueApi({
     issue: data
   });
-
 }
 
 async function addGitHubComment(issue, comment) {
@@ -158,4 +191,52 @@ async function moveToBugzilla(data) {
   }
   return { bugzillaId };
 
+}
+
+async function trancoRank(data) {
+  const {url} = data;
+
+  if (!url) {
+    return null;
+  }
+
+  if (!url.includes("://")) {
+    url = `https://${url}`;
+  }
+  const parsedUrl = new URL(url);
+  let targetDomain = parsedUrl.host;
+  let rank = null;
+  const tried = [];
+  while (targetDomain.includes(".")) {
+    tried.push(targetDomain);
+    const domainRankUrl = await getTrancoUrl(targetDomain);
+    const resp = await fetch(domainRankUrl);
+    if (resp.status === 200) {
+      const data = await resp.json();
+      // TODO: check if this is actually correct for the latest date
+      if (data && data.ranks.length) {
+        rank = data.ranks[0].rank;
+        break;
+      }
+    } else if (resp.status !== 404) {
+      console.error(`Failed to load ${domainRankUrl}`, resp);
+      throw new Error(resp);
+    }
+    const [first, ...rest] = targetDomain.split(".");
+    targetDomain = rest.join(".");
+  }
+  if (rank === null) {
+    console.log(`Failed to get domain rank; tried domains ${tried.join(", ")}`);
+  }
+  return {rank, rankedDomain: rank ? targetDomain : parsedUrl.host};
+}
+
+
+async function getTrancoUrl(domain) {
+  const msg = new TextEncoder().encode(domain);
+  const hashBuffer = await crypto.subtle.digest("SHA-1", msg);
+  const sha1 = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `https://jgraham.github.io/tranco-subdomains/ranks/domains/${sha1.slice(0,2)}/${sha1.slice(2,4)}/${sha1.slice(4)}.json`;
 }

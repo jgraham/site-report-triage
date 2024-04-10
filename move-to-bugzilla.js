@@ -1,56 +1,5 @@
-class Section {
-  constructor(id) {
-    this.elem = document.getElementById(id);
-  }
-
-  show() {
-    this.elem.hidden = false;
-  }
-
-  hide() {
-    this.elem.hidden = true;
-  }
-}
-
-class Sections {
-  constructor() {
-    this.sections = new Map();
-  }
-
-  add(name, id = null) {
-    const sectionId = id === null ? name : id;
-    this.sections.set(name, new Section(sectionId));
-  }
-
-  show(name) {
-    if (!this.sections.has(name)) {
-      throw new Error(`Unknown section ${name}`);
-    }
-    for (const [secName, section] of this.sections.entries()) {
-      if (secName !== name) {
-        section.hide();
-      }
-    }
-    this.sections.get(name).show();
-  }
-
-}
-
-class Control {
-  constructor(id, options = {}) {
-    const { getDefaultValue = null } = options;
-    this.elem = document.getElementById(id);
-    this.getDefaultValue = getDefaultValue ? getDefaultValue.bind(this) : null;
-  }
-
-  get value() {
-    return this.elem.value;
-  }
-
-  set value(value) {
-    this.elem.value = value;
-  }
-}
+import {State} from "./signal.js";
+import {Sections, Control} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -191,11 +140,10 @@ async function populateFromIssue(controls, issue) {
 
   issueData.parsedBody = parseIssueBody(issueData);
 
-  for (let control of Object.values(controls)) {
-    if (control.getDefaultValue !== null) {
-      control.value = control.getDefaultValue(issueData);
-    }
-  };
+  controls.summary.value = issueData.title;
+  controls.description.value = issueData.parsedBody.url;
+  controls.priority.value = getDiagnosisPriority(issueData);
+  controls.keywords.value = getKeywords(issueData);
 }
 
 function populateFromState(controls, state) {
@@ -214,29 +162,30 @@ async function populateMoveForm(sections, pathname) {
     return;
   }
 
+  const state = new State();
   const controls = {
-    summary: new Control("summary", {getDefaultValue: issueData => issueData.title}),
-    description: new Control("description", {getDefaultValue: bugzillaDescription}),
-    url: new Control("url", {getDefaultValue: issueData => issueData.parsedBody.url}),
-    priority: new Control("priority", {getDefaultValue: getDiagnosisPriority}),
-    severity: new Control("severity"),
-    keywords: new Control("keywords", {getDefaultValue: getKeywords}),
-    userStory: new Control("user-story"),
-    dependsOn: new Control("depends-on"),
+    summary: new Control(state, "summary"),
+    description: new Control(state, "description"),
+    url: new Control(state, "url"),
+    priority: new Control(state, "priority"),
+    severity: new Control(state, "severity"),
+    keywords: new Control(state, "keywords"),
+    userStory: new Control(state, "user-story"),
+    dependsOn: new Control(state, "depends-on"),
   };
 
   const storedState = new StoredState(issue);
 
   addEventListener("blur", () => storedState.set(controls));
 
-  const state = await storedState.get();
-  if (state !== null) {
-    populateFromState(controls, state);
+  const initialState = await storedState.get();
+  if (initialState !== null) {
+    populateFromState(controls, initialState);
   } else {
     populateFromIssue(controls, issue);
   }
 
-  const moveButton = document.getElementById("move");
+  const moveButton = document.getElementById("move-commit");
 
   moveButton.addEventListener("click", async e => {
     moveButton.disabled = true;
@@ -279,16 +228,16 @@ async function moveToBugzilla(bugData, githubData) {
   return browser.runtime.sendMessage(msg);
 }
 
-async function init() {
+async function render() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const url = new URL(tabs[0].url);
 
   const sections = new Sections();
-  sections.add("initial");
+  sections.add("move-initial");
   sections.add("move-form");
-  sections.add("bug");
+  sections.add("move-bug");
 
   populateMoveForm(sections, url.pathname);
 }
 
-addEventListener("DOMContentLoaded", init);
+addEventListener("DOMContentLoaded", render);

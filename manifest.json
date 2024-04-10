@@ -12,15 +12,19 @@
   "background": {
     "scripts": ["background.js"]
   },
+  "content_scripts": [
+    {
+      "matches": ["https://bugzilla.mozilla.org/show_bug.cgi?*"],
+      "js": ["bugzilla-content.js"],
+      "run_at": "document_start"
+    }
+  ],
   "page_action": {
-    "browser_style": true,
     "default_icon": "icons/exchange.svg",
-    "default_title": "Move To Bugzilla",
-    "default_popup": "move.html",
-    "show_matches": ["https://github.com/webcompat/web-bugs/issues/*"],
+    "show_matches": ["https://github.com/webcompat/web-bugs/issues/*", "https://bugzilla.mozilla.org/show_bug.cgi?*"],
     "hide_matches": ["https://github.com/webcompat/web-bugs/issues"]
   },
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "https://bugzilla.mozilla.org/show_bug.cgi?*"],
   "browser_specific_settings": {
     "gecko": {
       "id": "site-triage@hoppipolla.co.uk"

@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+<script src="triage-report.js" type="module"></script>
+<header>
+  <h1>Triage Site Report</h1>
+</header>
+<section id="triage-initial">
+  <p>Not a Site Report bug
+</section>
+<section id="triage-form">
+  <div class="form">
+    <div class="label">Current Ranking</div>
+    <div>
+      <label for="severity-initial">Severity:</label>
+      <output id="severity-initial"></output>
+
+      <label for="priority-initial">Priority:</label>
+      <output id="priority-initial"></output>
+    </div>
+
+    <label for="url">URL</label>
+    <input id="url" pattern="[^\s]+">
+
+    <p class="label">Platform</p>
+    <ul id="platform" class="input-list">
+      <li><input type=checkbox checked id="platform-windows" value="0.7"><label for=platform-windows>Windows</label>
+      <li><input type=checkbox checked id="platform-mac" value="0.2"><label for=platform-mac>macOS</label>
+      <li><input type=checkbox checked id="platform-linux" value="0.1"><label for=platform-linux>Linux</label>
+      <li><input type=checkbox checked id="platform-android" value="1"><label for=platform-android>Android</label>
+    </ul>
+
+    <label for="impact">Impact</label>
+    <select id="impact">
+      <option id=impact-site-broken value=100>Site broken
+      <option id=impact-blocked value=100>Unsupported / Blocked
+      <option id=impact-workflow-broken value=60>Workflow broken
+      <option id=impact-feature-broken value=30>Feature broken
+      <option id=impact-content-missing value=30>Content missing
+      <option id=impact-significant-visual value=20>Significant visual
+      <option id=impact-minor-visual value=1>Minor visual
+      <option id=impact-unsupported-warning value=20>Unsupported warning
+    </select>
+
+    <label for="configuration">Configuration</label>
+    <select id="configuration">
+      <option id=configuration-general value=1>General
+      <option id=configuration-common value=0.5>Specific but common
+      <option id=configuration-rare value=0.3>Rare
+    </select>
+
+    <label for="affects">Affects users</label>
+    <select id="affects">
+      <option id=affects-all value=1>All
+      <option id=affects-some value=0.3>Some
+      <option id=affects-few value=0.1>Few
+    </select>
+
+  </div>
+  <h2>Computed Data</h2>
+  <div class="form">
+    <label for="rank">Site Rank</label>
+    <div>
+      <output id="rank"></output>
+      <output id="rank-domain" hidden></output>
+    </div>
+
+    <label for="score">Score</label>
+    <output id="score"></output>
+
+    <div class="label">Bug Ranking</div>
+    <div>
+      <label for="severity">Severity:</label>
+      <select id="severity">
+        <option>--</option>
+        <option>S1</option>
+        <option>S2</option>
+        <option>S3</option>
+        <option>S4</option>
+        <option>N/A</option>
+      </select>
+
+      <label for="priority">Priority:</label>
+      <select id="priority">
+        <option>--</option>
+        <option>P1</option>
+        <option>P2</option>
+        <option>P3</option>
+        <option>P4</option>
+        <option>P5</option>
+      </select>
+    </div>
+
+    <div></div>
+    <div class="actions">
+      <button class="primary" id="update-bug">Update Bug</button>
+    </div>
+  </div>
+</section>
+
+<section id="error">
+<p id="error-message">Unknown error</p>
+</section>

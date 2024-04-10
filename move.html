@@ -1,14 +1,15 @@
 <!doctype html>
 <meta charset="utf-8">
 <link rel="stylesheet" href="style.css">
-<script src="move-to-bugzilla.js"></script>
+<script src="move-to-bugzilla.js" type="module"></script>
+
 <header>
   <h1>Move to Bugzilla</h1>
 </header>
-<div id="initial">
+<section id="move-initial">
   <p>Not a web-bug
-</div>
-<div id="move-form">
+</section>
+<section id="move-form">
   <div class="form">
     <label for=summary>Summary: </label><input id="summary">
     <label for=description>Description:</label><textarea id="description" rows="10" cols="80"></textarea>
@@ -32,10 +33,10 @@
     <label for=depends-on>Depends on: </label><input id="depends-on">
     <div></div>
     <div class="actions">
-      <button id="move" class="primary" disabled>Move bug</button>
+      <button id="move-commit" class="primary" disabled>Move bug</button>
     </div>
   </div>
-</div>
-<div id="bug">
+</section>
+<section id="move-bug">
   <p>Created <a id="bug-link" href="https://bugzilla.mozilla.org/show_bug.cgi?id="></a>
-</div>
+</section>
