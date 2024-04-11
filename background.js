@@ -149,7 +149,7 @@ async function moveToBugzilla(data) {
         method: 'POST',
         data: {
           state: "closed",
-          milestone: "moved"
+          milestone: 13  // The id of the "moved" milestone
         },
       });
     } catch(e) {
