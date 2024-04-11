@@ -157,6 +157,53 @@ function getKeywords(issueData) {
   return keywords.join(",");
 };
 
+class StoredState {
+  constructor(issue) {
+    self.key = `issueData-${issue.issueId}`;
+  }
+
+  async get() {
+    const result = await browser.storage.local.get(self.key);
+    return result[self.key] ?? null;
+  }
+
+  async set(controls) {
+    const controlState = {};
+    for (let [name, control] of Object.entries(controls)) {
+        controlState[name] = control.value;
+    }
+    const state = {};
+    state[self.key] = controlState;
+    const result = await browser.storage.local.set(state);
+  }
+
+  async clear() {
+    const result = await browser.storage.local.remove(self.key);
+  }
+
+}
+
+async function populateFromIssue(controls, issue) {
+  const issueData = await browser.runtime.sendMessage({
+    type: "get-issue-data",
+    ...issue
+  });
+
+  issueData.parsedBody = parseIssueBody(issueData);
+
+  for (let control of Object.values(controls)) {
+    if (control.getDefaultValue !== null) {
+      control.value = control.getDefaultValue(issueData);
+    }
+  };
+}
+
+function populateFromState(controls, state) {
+  for (const [controlName, value] of Object.entries(state)) {
+    controls[controlName].value = value;
+  }
+};
+
 async function populateMoveForm(sections, pathname) {
   const issue = issueInfo(pathname);
   if (!issue) {
@@ -177,19 +224,16 @@ async function populateMoveForm(sections, pathname) {
     dependsOn: new Control("depends-on"),
   };
 
-  const issueData = await browser.runtime.sendMessage({
-    type: "get-issue-data",
-    ...issue
-  });
+  const storedState = new StoredState(issue);
 
-  issueData.parsedBody = parseIssueBody(issueData);
+  addEventListener("pagehide", () => storedState.set(controls));
 
-  for (let control of Object.values(controls)) {
-    console.log(control, control.getDefaultValue);
-    if (control.getDefaultValue !== null) {
-      control.value = control.getDefaultValue(issueData);
-    }
-  };
+  const state = await storedState.get();
+  if (state !== null) {
+    populateFromState(controls, state);
+  } else {
+    populateFromIssue(controls, issue);
+  }
 
   const moveButton = document.getElementById("move");
 
@@ -209,6 +253,7 @@ async function populateMoveForm(sections, pathname) {
     bugLink.href += bugzillaId;
     bugLink.textContent = `bug ${bugzillaId}`;
     sections.show("bug");
+    storedState.clear();
   });
   moveButton.disabled = false;
 

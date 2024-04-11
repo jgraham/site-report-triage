@@ -36,14 +36,12 @@ browser.runtime.onMessage.addListener((data, sender) => {
 
 
 async function githubIssueApi({ issue, path = '', data, method = 'GET' }) {
-  console.log(issue);
   const body = {
     owner: issue.owner,
     repo: issue.repo,
     issue_number: issue.issueId,
     ... data,
   };
-  console.log(body);
 
   if (method !== "GET") {
     const user = await ensureUser();
