@@ -227,7 +227,7 @@ async function populateMoveForm(sections, pathname) {
 
   const storedState = new StoredState(issue);
 
-  addEventListener("pagehide", () => storedState.set(controls));
+  addEventListener("blur", () => storedState.set(controls));
 
   const state = await storedState.get();
   if (state !== null) {
