@@ -149,6 +149,7 @@ async function moveToBugzilla(data) {
         method: 'POST',
         data: {
           state: "closed",
+          milestone: "moved"
         },
       });
     } catch(e) {
