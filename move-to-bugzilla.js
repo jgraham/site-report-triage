@@ -106,31 +106,6 @@ function getKeywords(issueData) {
   return keywords.join(",");
 };
 
-class StoredState {
-  constructor(issue) {
-    self.key = `issueData-${issue.issueId}`;
-  }
-
-  async get() {
-    const result = await browser.storage.local.get(self.key);
-    return result[self.key] ?? null;
-  }
-
-  async set(controls) {
-    const controlState = {};
-    for (let [name, control] of Object.entries(controls)) {
-        controlState[name] = control.value;
-    }
-    const state = {};
-    state[self.key] = controlState;
-    const result = await browser.storage.local.set(state);
-  }
-
-  async clear() {
-    const result = await browser.storage.local.remove(self.key);
-  }
-
-}
 
 async function populateFromIssue(controls, issue) {
   const issueData = await browser.runtime.sendMessage({
@@ -140,17 +115,11 @@ async function populateFromIssue(controls, issue) {
 
   issueData.parsedBody = parseIssueBody(issueData);
 
-  controls.summary.value = issueData.title;
-  controls.description.value = issueData.parsedBody.url;
-  controls.priority.value = getDiagnosisPriority(issueData);
-  controls.keywords.value = getKeywords(issueData);
+  controls.summary.state = issueData.title;
+  controls.description.state = issueData.parsedBody.url;
+  controls.priority.state = getDiagnosisPriority(issueData);
+  controls.keywords.state = getKeywords(issueData);
 }
-
-function populateFromState(controls, state) {
-  for (const [controlName, value] of Object.entries(state)) {
-    controls[controlName].value = value;
-  }
-};
 
 async function populateMoveForm(sections, pathname) {
   const issue = issueInfo(pathname);
@@ -163,7 +132,10 @@ async function populateMoveForm(sections, pathname) {
   }
 
   const state = new State();
-  const controls = {
+  const section = sections.get("move-form");
+
+  const controls = section.controls;
+  Object.assign(controls, {
     summary: new Control(state, "summary"),
     description: new Control(state, "description"),
     url: new Control(state, "url"),
@@ -172,16 +144,11 @@ async function populateMoveForm(sections, pathname) {
     keywords: new Control(state, "keywords"),
     userStory: new Control(state, "user-story"),
     dependsOn: new Control(state, "depends-on"),
-  };
+  });
 
-  const storedState = new StoredState(issue);
+  section.setupDataStorage(`issueData-${issue.issueId}`);
 
-  addEventListener("blur", () => storedState.set(controls));
-
-  const initialState = await storedState.get();
-  if (initialState !== null) {
-    populateFromState(controls, initialState);
-  } else {
+  if (!await section.loadDataFromStorage()) {
     populateFromIssue(controls, issue);
   }
 
@@ -204,7 +171,6 @@ async function populateMoveForm(sections, pathname) {
     bugLink.href += bugzillaId;
     bugLink.textContent = `bug ${bugzillaId}`;
     sections.show("bug");
-    storedState.clear();
   });
   moveButton.disabled = false;
 

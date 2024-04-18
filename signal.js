@@ -72,7 +72,7 @@ class Signal {
   }
 
   set value(newValue) {
-    console.log("Set", newValue, this.currentValue);
+    // console.log("Set", newValue, this.currentValue);
     if (newValue !== this.currentValue) {
       this.currentValue = newValue;
       this.state.enqueueUpdate(this);

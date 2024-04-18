@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Sections, Control, SelectControl, OutputControl} from "./ui.js";
+import {Sections, Control, CheckboxControl, SelectControl, OutputControl} from "./ui.js";
 
 function getOptionsData() {
   return {
@@ -28,7 +28,10 @@ function getSeverity(controls, rank) {
 
   const affectsModifier = parseFloat(controls.affects.value);
 
-  const platformModifier = Array.from(Object.values(controls.platforms)).reduce((prev, current) => parseFloat(current.value) + prev, 0);
+  const platformModifier = Array.from(Object.values(controls.platforms))
+        .reduce((prev, current) => {console.log(current, current.value, prev); return parseFloat(current.value) + prev;}, 0);
+
+  console.log("getSeverity", impactScore, configurationModifier, affectsModifier, platformModifier);
 
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
   let severity = "S4";
@@ -83,16 +86,6 @@ function getPriority(rank, severity) {
     }
   }
   return {priority, priorityScore};
-}
-
-function getSelectedId(selectElem) {
-  const optionId = selectElem.selectedOptions[0].id;
-  const [prefix, ...value] = optionId.split("-");
-  return value.join("-");
-}
-
-function resetOutput() {
-  document.getElementById("output").hidden = true;
 }
 
 function computeScore(severity, priority) {
@@ -170,69 +163,69 @@ async function getRank(url) {
   return urlRank;
 }
 
-async function setInitialData(tab, controls) {
+async function loadBugData(tab) {
   const bugData = await browser.tabs.sendMessage(tab.id, {type: "read-bug-data"});
 
   if (bugData === null) {
     throw new Error("Unable to fetch bug data. Are you logged in?");
   }
 
+  return bugData;
+}
+
+async function populateFromBug(controls, bugData) {
   const optionsData = getOptionsData();
   const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
 
-  controls.url.value = bugData.url;
+  controls.url.state = bugData.url;
 
   let platforms;
   if (userStoryData.platforms) {
     for (const [platform, control] of Object.entries(controls.platforms)) {
-      control.elem.checked = userStoryData.platforms.includes(platform);
+      control.state = userStoryData.platforms.includes(platform);
     };
   }
   if (userStoryData.impact) {
-     controls.impact.selectedId = `impact-${userStoryData.impact}`;
+     controls.impact.state = `impact-${userStoryData.impact}`;
   }
   if (userStoryData.configuration) {
-    controls.configuration.selectedId = `configuration-${userStoryData.configuration}`;
+    controls.configuration.state = `configuration-${userStoryData.configuration}`;
   }
   if (userStoryData.affects) {
-    controls.affects.selectedId = `affects-${userStoryData.affects}`;
+    controls.affects.state = `affects-${userStoryData.affects}`;
   }
-
-  controls.initialPriority.value = bugData.priority;
-  controls.initialSeverity.value = bugData.severity;
-
-  return {
-    keywords: bugData.keywords,
-    userStory: bugData.cf_user_story
-  };
-
 }
 
 async function populateForm(tab, sections) {
   const state = new State();
-  const controls = {
+  const section  = sections.get("triage-form");
+  const controls = section.controls;
+
+  Object.assign(controls, {
     url: new Control(state, "url"),
     platforms: {
-      windows: new Control(state, "platform-windows"),
-      mac: new Control(state, "platform-mac"),
-      linux: new Control(state, "platform-linux"),
-      android: new Control(state, "platform-android"),
+      windows: new CheckboxControl(state, "platform-windows"),
+      mac: new CheckboxControl(state, "platform-mac"),
+      linux: new CheckboxControl(state, "platform-linux"),
+      android: new CheckboxControl(state, "platform-android"),
     },
     impact: new SelectControl(state, "impact"),
     configuration: new SelectControl(state, "configuration"),
     affects: new SelectControl(state, "affects"),
-    initialSeverity: new Control(state, "severity-initial"),
-    initialPriority: new Control(state, "priority-initial")
-  };
+    initialSeverity: new Control(state, "severity-initial", { persist: false }),
+    initialPriority: new Control(state, "priority-initial", { persist: false })
+  });
 
-  let initialData;
-  try {
-    initialData = await setInitialData(tab, controls);
-  } catch(e) {
-    document.getElementById("error-message").textContent = e.message;
-    sections.show("error");
-    throw e;
+  const bugData = await loadBugData(tab);
+  console.log(bugData);
+  section.setupDataStorage(`bug-${bugData.number}`);
+
+  if (!await section.loadDataFromStorage()) {
+    populateFromBug(controls, bugData);
   }
+
+  controls.initialPriority.state = bugData.priority;
+  controls.initialSeverity.state = bugData.severity;
 
   const initialRank = await getRank(controls.url.value);
   const rank = state.signal(initialRank);
@@ -257,9 +250,9 @@ async function populateForm(tab, sections) {
       priority: controls.priority.value,
       severity: controls.severity.value,
       url: controls.url.value,
-      keywords: initialData.keywords,
-      userStory: getUserStory(initialData.userStory, {
-        platform: Array.from(Object.entries(controls.platforms)).filter(([_, control]) => control.elem.checked).map(([name, _]) => name).join(","),
+      keywords: bugData.keywords,
+      userStory: getUserStory(bugData.cf_user_story, {
+        platform: Array.from(Object.entries(controls.platforms)).filter(([_, control]) => control.state).map(([name, _]) => name).join(","),
         impact: controls.impact.selectedId.split("-").slice(1).join("-"),
         configuration: controls.configuration.selectedId.split("-").slice(1).join("-"),
         affects: controls.affects.selectedId.split("-").slice(1).join("-")
@@ -272,7 +265,7 @@ async function populateForm(tab, sections) {
     }
   });
 
-  sections.show("triage-form");
+  sections.show(section.id);
 }
 
 async function render() {
@@ -285,7 +278,13 @@ async function render() {
   sections.add("triage-form");
   sections.add("error");
 
-  populateForm(tab, sections, url.pathname);
+  try {
+    populateForm(tab, sections, url.pathname);
+  } catch(e) {
+    document.getElementById("error-message").textContent = e.message;
+    sections.show("error");
+    throw e;
+  }
 }
 
 addEventListener("DOMContentLoaded", render);

@@ -19,6 +19,7 @@ function readBugData(data) {
     return null;
   }
   return {
+    number: new URL(location.href).searchParams.get("id"),
     product: document.getElementById("product").value,
     component: document.getElementById("component").value,
     priority: document.getElementById("priority").value,
