@@ -29,9 +29,7 @@ function getSeverity(controls, rank) {
   const affectsModifier = parseFloat(controls.affects.value);
 
   const platformModifier = Array.from(Object.values(controls.platforms))
-        .reduce((prev, current) => {console.log(current, current.value, prev); return parseFloat(current.value) + prev;}, 0);
-
-  console.log("getSeverity", impactScore, configurationModifier, affectsModifier, platformModifier);
+        .reduce((prev, current) => parseFloat(current.value) + prev, 0);
 
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
   let severity = "S4";
@@ -136,7 +134,15 @@ function extractUserStoryData(optionsData, userStory) {
   return rv;
 }
 
-function getUserStory(userStory, data) {
+function getUserStory(userStory, controls) {
+  const data = {
+    platform: Array.from(Object.entries(controls.platforms))
+      .filter(([_, control]) => control.state)
+      .map(([name, _]) => name).join(","),
+    impact: controls.impact.state.split("-").slice(1).join("-"),
+    configuration: controls.configuration.state.split("-").slice(1).join("-"),
+    affects: controls.affects.state.split("-").slice(1).join("-")
+  };
   const rv = [];
   for (let [prefix, value] of parseUserStory(userStory)) {
     if (prefix in data) {
@@ -153,6 +159,34 @@ function getUserStory(userStory, data) {
     rv.push(`${prefix}:${value}`);
   }
   return rv.join("\n");
+}
+
+function getKeywords(keywords, controls) {
+  const newKeywords = [];
+  const wantKeywords = new Set();
+  for (const control of [controls.status, controls.needsSitepatch, controls.outreach]) {
+    const value = control.value;
+    if (value) {
+      wantKeywords.add(value);
+    }
+  }
+
+  for (const keyword of keywords.split(",")) {
+    if (keywords.startsWith("webcompat:")) {
+      if (wantKeywords.has(keyword)) {
+        newKeywords.push(keyword);
+        wantKeywords.delete(keyword);
+      }
+    } else {
+      newKeywords.push(keyword);
+    }
+  }
+
+  for (const keyword of wantKeywords) {
+    newKeywords.push(keyword);
+  }
+
+  return newKeywords.join(",");
 }
 
 async function getRank(url) {
@@ -194,6 +228,30 @@ async function populateFromBug(controls, bugData) {
   if (userStoryData.affects) {
     controls.affects.state = `affects-${userStoryData.affects}`;
   }
+
+  const keywords = bugData.keywords.split();
+  const keywordPrefix = "webcompat:";
+  const webcompatKeywords = new Set(keywords
+                                    .filter(keyword => keyword.startsWith(keywordPrefix))
+                                    .map(keyword => keyword.slice(keywordPrefix.length)));
+
+  controls.needsSitepatch.state = webcompatKeywords.has("needs-sitepatch");
+  for (let outreachKeyword of ["needs-contact", "contact-ready", "sitewait"]) {
+    if (webcompatKeywords.has(outreachKeyword)) {
+      controls.outreach.state = `outreach-${outreachKeyword}`;
+    }
+  }
+  let foundStatus = false;
+  for (let statusKeyword of ["needs-diagnosis", "platform-bug"]) {
+    if (webcompatKeywords.has(statusKeyword)) {
+      controls.status.state = `status-${statusKeyword}`;
+      foundStatus = true;
+    }
+  }
+
+  if (!foundStatus && controls.outreach.state != "outreach-none") {
+    controls.status.state = "status-sitebug";
+  }
 }
 
 async function populateForm(tab, sections) {
@@ -212,12 +270,14 @@ async function populateForm(tab, sections) {
     impact: new SelectControl(state, "impact"),
     configuration: new SelectControl(state, "configuration"),
     affects: new SelectControl(state, "affects"),
+    status: new SelectControl(state, "status"),
+    outreach: new SelectControl(state, "outreach"),
+    needsSitepatch: new CheckboxControl(state, "needs-sitepatch", { defaultValue: "" }),
     initialSeverity: new Control(state, "severity-initial", { persist: false }),
-    initialPriority: new Control(state, "priority-initial", { persist: false })
+    initialPriority: new Control(state, "priority-initial", { persist: false }),
   });
 
   const bugData = await loadBugData(tab);
-  console.log(bugData);
   section.setupDataStorage(`bug-${bugData.number}`);
 
   if (!await section.loadDataFromStorage()) {
@@ -237,8 +297,22 @@ async function populateForm(tab, sections) {
   const priority = state.computed(() => getPriority(rank.value, severity.value));
   const score = state.computed(() => computeScore(severity.value, priority.value));
 
+  state.effect(() => {
+    // Weird mix of .value and .state is so this only depends on controls.status
+    if (controls.status.value === "" && controls.outreach.state === "outreach-none") {
+      controls.outreach.state = "outreach-needs-contact";
+    }
+  });
+
   controls.rank = new OutputControl(state, "rank", () => rank.value ? rank.value.rank : "null");
-  controls.rankDomain = new OutputControl(state, "rank-domain", () => rank.value ? rank.value.rankDomain: "");
+  controls.rankDomain = new OutputControl(state, "rank-domain", (control) => {
+    if (rank.value) {
+      control.show();
+      return `(${rank.value.rankedDomain})`;
+    }
+    control.hide();
+    return "";
+  });
   controls.severity = new OutputControl(state, "severity", () => severity.value.severity);
   controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
   controls.score = new OutputControl(state, "score", () => score.value);
@@ -250,13 +324,8 @@ async function populateForm(tab, sections) {
       priority: controls.priority.value,
       severity: controls.severity.value,
       url: controls.url.value,
-      keywords: bugData.keywords,
-      userStory: getUserStory(bugData.cf_user_story, {
-        platform: Array.from(Object.entries(controls.platforms)).filter(([_, control]) => control.state).map(([name, _]) => name).join(","),
-        impact: controls.impact.selectedId.split("-").slice(1).join("-"),
-        configuration: controls.configuration.selectedId.split("-").slice(1).join("-"),
-        affects: controls.affects.selectedId.split("-").slice(1).join("-")
-      })
+      keywords: getKeywords(bugData.keywords, controls),
+      userStory: getUserStory(bugData.cf_user_story, controls)
     };
     try {
       await browser.tabs.sendMessage(tab.id, {type: "set-bug-data", ...data});

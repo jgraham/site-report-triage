@@ -132,8 +132,14 @@ export class Control extends UiElement {
 }
 
 export class CheckboxControl extends Control {
+  constructor(state, id, options = {}) {
+    super(state, id, options);
+    const { defaultValue = "0" } = options;
+    this.defaultValue = defaultValue;
+  }
+
   getValueFromElement() {
-    return this.elem.checked ? this.elem.value : "0";
+    return this.elem.checked ? this.elem.value : this.defaultValue;
   }
 
   get value() {
@@ -181,9 +187,10 @@ export class OutputControl extends UiElement {
   constructor(state, id, getValue, options = {}) {
     super(id, options);
     this.elem = document.getElementById(id);
+    const control = this;
     state.effect(() => {
       console.log(`Updating ${id}`);
-      const newValue = getValue();
+      const newValue = getValue(control);
       if (newValue !== this.elem.value) {
         this.elem.value = newValue;
       }
@@ -205,6 +212,12 @@ async function loadControlsData(storage, controls) {
     let target = controls;
     for (const key of keyParts) {
       target = target[key];
+      if (!target) {
+        break;
+      }
+    }
+    if (!target) {
+      continue;
     }
     console.log(`Setting ${controlName} ${state}`);
     target.state = state;

@@ -10,7 +10,7 @@
 </section>
 <section id="triage-form">
   <div class="form">
-    <div class="label">Current Ranking</div>
+    <p class="label">Current Ranking</p>
     <div>
       <label for="severity-initial">Severity:</label>
       <output id="severity-initial"></output>
@@ -19,8 +19,15 @@
       <output id="priority-initial"></output>
     </div>
 
-    <label for="url">URL</label>
-    <input id="url" pattern="[^\s]+">
+    <p class="label"><label for="url">URL</label></p>
+    <ul class="input-list">
+      <li><input id="url" pattern="[^\s]+">
+      <li>
+        <div>
+          <label for="rank">Site Rank: </label><output id="rank"></output>
+          <output id="rank-domain" hidden></output>
+        </div>
+    </ul>
 
     <p class="label">Platform</p>
     <ul id="platform" class="input-list">
@@ -55,46 +62,64 @@
       <option id=affects-some value=0.3>Some
       <option id=affects-few value=0.1>Few
     </select>
+  </div>
+
+
+  <h2>Diagnosis Status</h2>
+  <div class="form">
+    <label for="status">Status</label>
+    <select id="status">
+      <option id="status-needs-diagnosis" value="webcompat:needs-diagnosis">Needs Diagnosis
+      <option id="status-platform-bug" value="webcompat:platform-bug">Platform bug
+      <option id="status-sitebug" value="">Site bug
+    </select>
+
+    <label for="needs-sitepatch">Needs Sitepatch</label>
+    <div>
+      <input type="checkbox" id="needs-sitepatch" value="webcompat:needs-sitepatch">
+    </div>
+
+    <label for="outreach">Outreach</label>
+    <select id="outreach">
+      <option id="outreach-none" value="">None
+      <option id="outreach-needs-contact" value="webcompat:needs-contact">Needs Contact
+      <option id="outreach-contact-ready" value="webcompat:contact-ready">Have Contact
+      <option id="outreach-sitewait" value="webcompat:site-wait">Waiting for Response
+    </select>
 
   </div>
-  <h2>Computed Data</h2>
+
+  <h2>Diagnosis Priority</h2>
   <div class="form">
-    <label for="rank">Site Rank</label>
-    <div>
-      <output id="rank"></output>
-      <output id="rank-domain" hidden></output>
-    </div>
+    <p class="label">Bug Ranking</p>
+    <ul class="input-list-inline">
+      <li><label for="severity">Severity:</label>
+        <select id="severity">
+          <option>--</option>
+          <option>S1</option>
+          <option>S2</option>
+          <option>S3</option>
+          <option>S4</option>
+          <option>N/A</option>
+        </select>
 
-    <label for="score">Score</label>
-    <output id="score"></output>
+      <li><label for="priority">Priority:</label>
+        <select id="priority">
+          <option>--</option>
+          <option>P1</option>
+          <option>P2</option>
+          <option>P3</option>
+          <option>P4</option>
+          <option>P5</option>
+        </select>
 
-    <div class="label">Bug Ranking</div>
-    <div>
-      <label for="severity">Severity:</label>
-      <select id="severity">
-        <option>--</option>
-        <option>S1</option>
-        <option>S2</option>
-        <option>S3</option>
-        <option>S4</option>
-        <option>N/A</option>
-      </select>
+      <li><label for="score">Score:</label>
+        <output id="score"></output>
+    </ul>
+  </div>
 
-      <label for="priority">Priority:</label>
-      <select id="priority">
-        <option>--</option>
-        <option>P1</option>
-        <option>P2</option>
-        <option>P3</option>
-        <option>P4</option>
-        <option>P5</option>
-      </select>
-    </div>
-
-    <div></div>
-    <div class="actions">
-      <button class="primary" id="update-bug">Update Bug</button>
-    </div>
+  <div class="actions">
+    <button class="primary" id="update-bug">Update Bug</button>
   </div>
 </section>
 
