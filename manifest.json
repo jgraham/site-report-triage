@@ -3,8 +3,8 @@
   "name": "Site Issue Triage",
   "version": "0.1",
   "icons": {
-    "48": "icons/exchange.svg",
-    "96": "icons/exchange.svg"
+    "48": "icons/lightbulb.svg",
+    "96": "icons/lightbulb.svg"
   },
   "options_ui": {
     "page": "options.html"
@@ -20,7 +20,7 @@
     }
   ],
   "page_action": {
-    "default_icon": "icons/exchange.svg",
+    "default_icon": "icons/lightbulb.svg",
     "show_matches": ["https://github.com/webcompat/web-bugs/issues/*", "https://bugzilla.mozilla.org/show_bug.cgi?*"],
     "hide_matches": ["https://github.com/webcompat/web-bugs/issues"]
   },
