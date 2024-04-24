@@ -148,6 +148,9 @@ function getUserStory(userStory, controls) {
   };
   const rv = [];
   for (let [prefix, value] of parseUserStory(userStory)) {
+    if (!prefix) {
+        continue;
+    }
     if (prefix in data) {
       value = data[prefix];
       delete data[prefix];
