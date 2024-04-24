@@ -52,11 +52,14 @@ function getSeverity(controls, rank) {
   };
 }
 
-function getPriority(rank, severity) {
+function getPriority(rank, severity, regression) {
   const severityRank = parseInt(severity.severity[1]);
   let priority;
   let priorityScore;
-  if (rank === null || rank > 100000) {
+  if (regression) {
+    priority = "P1";
+    priorityScore = 10;
+  } else if (rank === null || rank > 100000) {
     priority = "P3";
     priorityScore = 1;
   } else if (rank > 10000) {
@@ -164,7 +167,7 @@ function getUserStory(userStory, controls) {
 function getKeywords(keywords, controls) {
   const newKeywords = [];
   const wantKeywords = new Set();
-  for (const control of [controls.status, controls.needsSitepatch, controls.outreach]) {
+  for (const control of [controls.status, controls.needsSitepatch, controls.outreach, controls.regression]) {
     const value = control.value;
     if (value) {
       wantKeywords.add(value);
@@ -172,7 +175,7 @@ function getKeywords(keywords, controls) {
   }
 
   for (const keyword of keywords.split(",")) {
-    if (keywords.startsWith("webcompat:")) {
+    if (keyword.startsWith("webcompat:") || keyword === "regression") {
       if (wantKeywords.has(keyword)) {
         newKeywords.push(keyword);
         wantKeywords.delete(keyword);
@@ -272,6 +275,7 @@ async function populateForm(tab, sections) {
     affects: new SelectControl(state, "affects"),
     status: new SelectControl(state, "status"),
     outreach: new SelectControl(state, "outreach"),
+    regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
     needsSitepatch: new CheckboxControl(state, "needs-sitepatch", { defaultValue: "" }),
     initialSeverity: new Control(state, "severity-initial", { persist: false }),
     initialPriority: new Control(state, "priority-initial", { persist: false }),
@@ -294,7 +298,7 @@ async function populateForm(tab, sections) {
   });
 
   const severity = state.computed(() => getSeverity(controls, rank.value));
-  const priority = state.computed(() => getPriority(rank.value, severity.value));
+  const priority = state.computed(() => getPriority(rank.value, severity.value, controls.regression.value));
   const score = state.computed(() => computeScore(severity.value, priority.value));
 
   state.effect(() => {
