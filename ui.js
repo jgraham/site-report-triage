@@ -98,7 +98,6 @@ export class Control extends UiElement {
     this.elem = document.getElementById(id);
     this.signal = state.signal(this.getValueFromElement());
     this.elem.addEventListener("change", () => {
-      console.log("Change", this.id, this.state);
       this.signal.value = this.getValueFromElement();
     });
   }
@@ -108,12 +107,10 @@ export class Control extends UiElement {
   }
 
   get value() {
-    console.log("get value", this.id, this.elem.value);
     return this.signal.value;
   }
 
   set value(value) {
-    console.log("set value", this.id, value);
     this.elem.value = value;
     this.signal.value = value;
   }
@@ -189,7 +186,6 @@ export class OutputControl extends UiElement {
     this.elem = document.getElementById(id);
     const control = this;
     state.effect(() => {
-      console.log(`Updating ${id}`);
       const newValue = getValue(control);
       if (newValue !== this.elem.value) {
         this.elem.value = newValue;
@@ -219,7 +215,6 @@ async function loadControlsData(storage, controls) {
     if (!target) {
       continue;
     }
-    console.log(`Setting ${controlName} ${state}`);
     target.state = state;
   }
   return true;
