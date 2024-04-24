@@ -224,12 +224,18 @@ async function populateFromBug(controls, bugData) {
   }
   if (userStoryData.impact) {
      controls.impact.state = `impact-${userStoryData.impact}`;
+  } else {
+    controls.impact.state = `impact-impact-site-broken`;
   }
   if (userStoryData.configuration) {
     controls.configuration.state = `configuration-${userStoryData.configuration}`;
+  } else {
+     controls.configuration.state = `configuration-general`;
   }
   if (userStoryData.affects) {
     controls.affects.state = `affects-${userStoryData.affects}`;
+  } else {
+    controls.affects.state = `affects-all`;
   }
 
   const keywords = bugData.keywords.split();
@@ -239,11 +245,17 @@ async function populateFromBug(controls, bugData) {
                                     .map(keyword => keyword.slice(keywordPrefix.length)));
 
   controls.needsSitepatch.state = webcompatKeywords.has("needs-sitepatch");
+  let foundOutreach = false;
   for (let outreachKeyword of ["needs-contact", "contact-ready", "sitewait"]) {
     if (webcompatKeywords.has(outreachKeyword)) {
       controls.outreach.state = `outreach-${outreachKeyword}`;
+      foundOutreach = true;
     }
   }
+  if (!foundOutreach) {
+    controls.outreach.state = `outreach-none`;
+  }
+
   let foundStatus = false;
   for (let statusKeyword of ["needs-diagnosis", "platform-bug"]) {
     if (webcompatKeywords.has(statusKeyword)) {
@@ -252,9 +264,24 @@ async function populateFromBug(controls, bugData) {
     }
   }
 
-  if (!foundStatus && controls.outreach.state != "outreach-none") {
-    controls.status.state = "status-sitebug";
+  if (!foundStatus) {
+    if (controls.outreach.state != "outreach-none") {
+      controls.status.state = "status-sitebug";
+    } else {
+      controls.status.state = "status-needs-diagnosis";
+    }
   }
+
+  controls.regression.state = keywords.includes("regression");
+}
+
+async function resetData(section, controls, bugData) {
+  if (!await section.loadDataFromStorage()) {
+    populateFromBug(controls, bugData);
+  }
+
+  controls.initialPriority.state = bugData.priority;
+  controls.initialSeverity.state = bugData.severity;
 }
 
 async function populateForm(tab, sections) {
@@ -284,12 +311,7 @@ async function populateForm(tab, sections) {
   const bugData = await loadBugData(tab);
   section.setupDataStorage(`bug-${bugData.number}`);
 
-  if (!await section.loadDataFromStorage()) {
-    populateFromBug(controls, bugData);
-  }
-
-  controls.initialPriority.state = bugData.priority;
-  controls.initialSeverity.state = bugData.severity;
+  await resetData(section, controls, bugData);
 
   const initialRank = await getRank(controls.url.value);
   const rank = state.signal(initialRank);
@@ -321,9 +343,9 @@ async function populateForm(tab, sections) {
   controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
   controls.score = new OutputControl(state, "score", () => score.value);
 
-  const moveButton = document.getElementById("update-bug");
-  moveButton.addEventListener("click", async () => {
-    moveButton.disabled = true;
+  const updateButton = document.getElementById("update-bug");
+  updateButton.addEventListener("click", async () => {
+    updateButton.disabled = true;
     const data = {
       priority: controls.priority.value,
       severity: controls.severity.value,
@@ -333,9 +355,17 @@ async function populateForm(tab, sections) {
     };
     try {
       await browser.tabs.sendMessage(tab.id, {type: "set-bug-data", ...data});
+      section.storage.clear();
     } finally {
       window.close();
     }
+  });
+
+  const resetButton = document.getElementById("reset-triage-form");
+  resetButton.addEventListener("click", () => {
+    console.log("resetButton.click");
+    section.storage.clear();
+    resetData(section, controls, bugData);
   });
 
   sections.show(section.id);
@@ -352,7 +382,7 @@ async function render() {
   sections.add("error");
 
   try {
-    populateForm(tab, sections, url.pathname);
+    await populateForm(tab, sections);
   } catch(e) {
     document.getElementById("error-message").textContent = e.message;
     sections.show("error");

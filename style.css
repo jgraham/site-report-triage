@@ -35,7 +35,7 @@
         --control-border-color: rgb(60, 61, 62);
         --button-background-color: rgb(70, 71, 72);
         --button-border-color: rgb(70, 71, 72);
-        --hovered-buttonbackground-color: rgb(60, 61, 62);
+        --hovered-button-background-color: rgb(60, 61, 62);
         --pressed-button-background-color: rgb(40, 41, 42);
         --link-text-color: rgb(26, 168, 245);
         --hovered-link-text-color: rgb(24, 151, 219);
@@ -127,6 +127,7 @@ button {
     border-color: var(--button-border-color);
     border-radius: var(4px);
     border: 1px solid var(--button-border-color);
+    display: inline-block;
     padding: 6px 12px;
 }
 
@@ -181,9 +182,8 @@ ul.input-list-inline > li {
 }
 
 .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
     margin: 1rem;
-}
-
-.actions > button {
-    float: right;
 }
