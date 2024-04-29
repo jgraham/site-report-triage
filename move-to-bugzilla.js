@@ -116,7 +116,8 @@ async function populateFromIssue(controls, issue) {
   issueData.parsedBody = parseIssueBody(issueData);
 
   controls.summary.state = issueData.title;
-  controls.description.state = issueData.parsedBody.url;
+  controls.description.state = bugzillaDescription(issueData);
+  controls.url.state = issueData.parsedBody.url;
   controls.priority.state = getDiagnosisPriority(issueData);
   controls.keywords.state = getKeywords(issueData);
 }
