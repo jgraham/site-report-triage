@@ -170,14 +170,14 @@ function getUserStory(userStory, controls) {
 function getKeywords(keywords, controls) {
   const newKeywords = [];
   const wantKeywords = new Set();
-  for (const control of [controls.status, controls.needsSitepatch, controls.outreach, controls.regression]) {
+  for (const control of [controls.status, controls.sitepatch, controls.outreach, controls.regression]) {
     const value = control.value;
     if (value) {
       wantKeywords.add(value);
     }
   }
 
-  for (const keyword of keywords.split(",")) {
+  for (const keyword of keywords) {
     if (keyword.startsWith("webcompat:") || keyword === "regression") {
       if (wantKeywords.has(keyword)) {
         newKeywords.push(keyword);
@@ -192,7 +192,7 @@ function getKeywords(keywords, controls) {
     newKeywords.push(keyword);
   }
 
-  return newKeywords.join(",");
+  return newKeywords.join(", ");
 }
 
 async function getRank(url) {
@@ -211,6 +211,15 @@ async function loadBugData(tab) {
   }
 
   return bugData;
+}
+
+function selectStateFromKeywords(prefix, keywords, bugKeywords, defaultFn) {
+  for (let keyword of keywords) {
+    if (bugKeywords.has(keyword)) {
+      return `${prefix}-${keyword}`;
+    }
+  }
+  return defaultFn();
 }
 
 async function populateFromBug(controls, bugData) {
@@ -241,41 +250,28 @@ async function populateFromBug(controls, bugData) {
     controls.affects.state = `affects-all`;
   }
 
-  const keywords = bugData.keywords.split();
   const keywordPrefix = "webcompat:";
-  const webcompatKeywords = new Set(keywords
+  const webcompatKeywords = new Set(bugData.keywords
                                     .filter(keyword => keyword.startsWith(keywordPrefix))
-                                    .map(keyword => keyword.slice(keywordPrefix.length)));
+                                    .map(keyword => {console.log(keyword, keyword.slice(keywordPrefix.length)); return keyword.slice(keywordPrefix.length);}));
 
-  controls.needsSitepatch.state = webcompatKeywords.has("needs-sitepatch");
-  let foundOutreach = false;
-  for (let outreachKeyword of ["needs-contact", "contact-ready", "sitewait"]) {
-    if (webcompatKeywords.has(outreachKeyword)) {
-      controls.outreach.state = `outreach-${outreachKeyword}`;
-      foundOutreach = true;
-    }
-  }
-  if (!foundOutreach) {
-    controls.outreach.state = `outreach-none`;
-  }
+  controls.outreach.state = selectStateFromKeywords("outreach", ["needs-contact", "contact-ready", "sitewait"],
+                                                   webcompatKeywords, () => "outreach-none");
 
-  let foundStatus = false;
-  for (let statusKeyword of ["needs-diagnosis", "platform-bug"]) {
-    if (webcompatKeywords.has(statusKeyword)) {
-      controls.status.state = `status-${statusKeyword}`;
-      foundStatus = true;
-    }
-  }
+  controls.status.state = selectStateFromKeywords("status", ["needs-diagnosis", "platform-bug"], webcompatKeywords,
+                                                  () => {
+                                                    if (controls.outreach.state != "outreach-none") {
+                                                      return "status-sitebug";
+                                                    }
+                                                    return "status-needs-diagnosis";
+                                                  });
 
-  if (!foundStatus) {
-    if (controls.outreach.state != "outreach-none") {
-      controls.status.state = "status-sitebug";
-    } else {
-      controls.status.state = "status-needs-diagnosis";
-    }
-  }
+  console.log(selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
+                                                     webcompatKeywords, () => "sitepatch-none"));
+  controls.sitepatch.state = selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
+                                                     webcompatKeywords, () => "sitepatch-none");
 
-  controls.regression.state = keywords.includes("regression");
+  controls.regression.state = bugData.keywords.includes("regression");
 }
 
 async function resetData(section, controls, bugData) {
@@ -306,7 +302,7 @@ async function populateForm(tab, sections) {
     status: new SelectControl(state, "status"),
     outreach: new SelectControl(state, "outreach"),
     regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
-    needsSitepatch: new CheckboxControl(state, "needs-sitepatch", { defaultValue: "" }),
+    sitepatch: new SelectControl(state, "sitepatch"),
     initialSeverity: new Control(state, "severity-initial", { persist: false }),
     initialPriority: new Control(state, "priority-initial", { persist: false }),
   });

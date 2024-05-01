@@ -24,7 +24,7 @@ function readBugData(data) {
     priority: document.getElementById("priority").value,
     severity: document.getElementById("bug_severity").value,
     url: document.getElementById("bug_file_loc").value,
-    keywords: document.getElementById("keywords").value,
+    keywords: document.getElementById("keywords").value.split(",").map(x => x.trim()),
     cf_user_story: document.getElementById("cf_user_story").value || "",
   };
 }

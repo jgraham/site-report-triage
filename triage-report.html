@@ -75,19 +75,25 @@
   <h2>Diagnosis Status</h2>
   <div class="form">
     <label for="status">Status</label>
-    <select id="status">
-      <option id="status-needs-diagnosis" value="webcompat:needs-diagnosis">Needs Diagnosis
-      <option id="status-platform-bug" value="webcompat:platform-bug">Platform bug
-      <option id="status-sitebug" value="">Site bug
-    </select>
+    <ul class="input-list-inline">
+      <li>
+        <select id="status">
+          <option id="status-needs-diagnosis" value="webcompat:needs-diagnosis">Needs Diagnosis
+          <option id="status-platform-bug" value="webcompat:platform-bug">Platform bug
+          <option id="status-sitebug" value="">Site bug
+        </select>
+      <li>
+        <input type="checkbox" id="regression" value="regression">
+        <label for="regression">Regression</label>
+    </ul>
 
-    <div></div>
-    <div class="input-list-inline">
-      <label for="regression">Regression</label>
-      <input type="checkbox" id="regression" value="regression">
-      <label for="needs-sitepatch">Needs Sitepatch</label>
-      <input type="checkbox" id="needs-sitepatch" value="webcompat:needs-sitepatch">
-    </div>
+    <label for="sitepatch">Intervention</label>
+    <select id="sitepatch">
+      <option id="sitepatch-none" value="">None
+      <option id="sitepatch-needs-sitepatch" value="webcompat:needs-sitepatch">Needs Sitepatch
+      <option id="sitepatch-applied" value="webcompat:sitepatch-applied">Sitepatch Applied
+        <!-- TODO field to record site patch bug -->
+    </select>
 
     <label for="outreach">Outreach</label>
     <select id="outreach">
@@ -96,6 +102,7 @@
       <option id="outreach-contact-ready" value="webcompat:contact-ready">Have Contact
       <option id="outreach-sitewait" value="webcompat:site-wait">Waiting for Response
     </select>
+  </div>
 
   </div>
 

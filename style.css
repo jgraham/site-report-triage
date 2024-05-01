@@ -103,11 +103,14 @@ input, select, textarea {
     color: var(--control-foreground-color);
     background-color: var(--control-background-color);
     font-family: var(--font-family-monospace);
-    width: 100%;
-    max-width: 40rem;
     border: 1px solid var(--control-border-color);
     border-radius: 4px;
     box-shadow: none;
+}
+
+div.form > input, div.form > select, div.form > textarea {
+    width: 100%;
+    max-width: 40rem;
 }
 
 input[type=checkbox] {
@@ -153,10 +156,6 @@ button.primary:active {
     background-color: var(--pressed-primary-button-background-color);
 }
 
-#priority, #severity {
-    width: 4em;
-}
-
 .form {
     display: grid;
     grid-template-columns: 10rem auto;
@@ -174,11 +173,15 @@ ul.input-list-inline {
     list-style: none;
     margin: 0;
     padding: 0;
+    display: flex;
 }
 
 ul.input-list-inline > li {
-    display: inline-block;
     margin-right: 8px;
+}
+
+#priority, #severity {
+    width: 4em;
 }
 
 .actions {
