@@ -175,6 +175,12 @@ async function populateMoveForm(sections, pathname) {
   });
   moveButton.disabled = false;
 
+  const resetButton = document.getElementById("reset-move-form");
+  resetButton.addEventListener("click", () => {
+    section.storage.clear();
+    populateFromIssue(controls, issue);
+  });
+
   sections.show("move-form");
 }
 
