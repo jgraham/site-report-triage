@@ -127,7 +127,22 @@ async function addGitHubComment(issue, comment) {
 }
 
 async function createBugzillaBug(data) {
-  const { component, product, opSys, severity, priority, bugType, summary, description, keywords, url, dependsOn = [], userStory = "" } = data;
+  const {
+    component,
+    product,
+    opSys,
+    severity,
+    priority,
+    bugType,
+    summary,
+    description,
+    keywords,
+    url,
+    dependsOn = [],
+    userStory = "",
+    blocks = [],
+    seeAlso = []
+  } = data;
 
   const user = await ensureUser();
 
@@ -145,6 +160,8 @@ async function createBugzillaBug(data) {
     description,
     url,
     depends_on: dependsOn,
+    blocks: blocks,
+    see_also: seeAlso,
     cf_user_story: userStory,
   };
 
@@ -170,13 +187,15 @@ async function createBugzillaBug(data) {
 
 async function moveToBugzilla(data) {
   const { bugData, githubData } = data;
+  const resp = {};
   const bugzillaId = await createBugzillaBug(bugData);
-  const comment = `Moved to bugzilla: `
-        + `https://bugzilla.mozilla.org/show_bug.cgi?id=${bugzillaId}\n`;
-  await addGitHubComment(githubData, comment);
-  if (githubData.close) {
-    // Close issue
-    try {
+  let githubError = null;
+  try {
+    const comment = `Moved to bugzilla: `
+          + `https://bugzilla.mozilla.org/show_bug.cgi?id=${bugzillaId}\n`;
+    await addGitHubComment(githubData, comment);
+    if (githubData.close) {
+      // Close issue
       await githubIssueApi({
         issue: githubData,
         method: 'POST',
@@ -185,11 +204,15 @@ async function moveToBugzilla(data) {
           milestone: 13  // The id of the "moved" milestone
         },
       });
-    } catch(e) {
-      console.error("Failed to close GH issue", e);
     }
+  } catch(e) {
+    console.error("Failed to close GH issue", e);
+    githubError = e;
   }
-  return { bugzillaId };
+  return {
+    bugzillaId,
+    githubError
+  };
 
 }
 

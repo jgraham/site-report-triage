@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Sections, Control} from "./ui.js";
+import {Section, Sections, CheckboxControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -28,7 +28,7 @@ function parseIssueBody(issueData) {
   const bodyLines = issueData.body.split("\n");
   const fields = {
     url: "",
-    browser: "",
+    browser_version: "",
     operating_system: "",
     problem_type: "",
     description: "",
@@ -61,16 +61,11 @@ function parseIssueBody(issueData) {
   return fields;
 }
 
-function bugzillaDescription(issueData) {
-  return `${issueData.parsedBody.description}
+function getDiagnosisPriority(issueData, isRegression) {
+  if (isRegression) {
+    return "P1";
+  }
 
-Steps to reproduce:
-${issueData.parsedBody.steps_to_reproduce}
-Created from ${issueData.html_url}
-`;
-}
-
-function getDiagnosisPriority(issueData) {
   const label = issueData.labels.find(label => label.name.startsWith("diagnosis-priority"));
   if (!label) {
     return "--";
@@ -95,93 +90,208 @@ function getDiagnosisPriority(issueData) {
   }
 }
 
-function getKeywords(issueData) {
+function getBugData(issueData, controls) {
+  let strText = "";
+  if (controls.str.value.trim()) {
+    strText = `**Steps to reproduce:**
+${controls.str.value.trim()}`;
+  }
+
+  let expectedText = "";
+  if (controls.expectedBehavior.value.trim()) {
+    expectedText = `**Expected Behavior:**
+${controls.expectedBehavior.value.trim()}`;
+  }
+
+  let actualText = "";
+  if (controls.actualBehavior.value.trim()) {
+    actualText = `**Actual Behavior:**
+${controls.actualBehavior.value.trim()}`;
+  }
+  const sectionsText = [strText, expectedText, actualText].filter(x => x.length).join("\n\n");
+
+  let notes = [];
+  if (controls.etp.state !== "other") {
+    notes.push(controls.etp.value);
+  }
+  const reproducesIn = [];
+  const doesNotReproduceIn = [];
+  for (const ctrl of Object.values(controls.reproduces)) {
+    const target = ctrl.state ? reproducesIn : doesNotReproduceIn;
+    // Want the value even if the checkbox is unticked
+    target.push(ctrl.elem.value);
+  }
+  if (reproducesIn.length) {
+    notes.push(`Reproduces in ${reproducesIn.join(', ')}`);
+  }
+  if (doesNotReproduceIn.length) {
+    notes.push(`Does not reproduce in ${doesNotReproduceIn.join(', ')}`);
+  }
+  const notesText = notes.map(item => `- ${item}`).join("\n");
+
+  const description = `**Environment:**
+Operating system: ${controls.operatingSystem.value}
+Firefox version: ${controls.firefoxVersion.value}
+
+${sectionsText}
+
+**Notes:**
+${notesText}
+
+Created from ${issueData.html_url}
+`;
+
   const keywords = [];
+  if (controls.reproduces.firefoxNightly.state && !controls.reproduces.firefoxRelease.state) {
+    keywords.push("regression");
+  }
   if (issueData.milestone.title === "needsdiagnosis") {
     keywords.push("webcompat:needs-diagnosis");
   }
   if (issueData.labels.find(label => label.name == ("action-needssitepatch"))) {
     keywords.push("webcompat:needs-sitepatch");
   }
-  return keywords.join(",");
-};
 
-
-async function populateFromIssue(controls, issue) {
-  const issueData = await browser.runtime.sendMessage({
-    type: "get-issue-data",
-    ...issue
-  });
-
-  issueData.parsedBody = parseIssueBody(issueData);
-
-  controls.summary.state = issueData.title;
-  controls.description.state = bugzillaDescription(issueData);
-  controls.url.state = issueData.parsedBody.url;
-  controls.priority.state = getDiagnosisPriority(issueData);
-  controls.keywords.state = getKeywords(issueData);
+  return {
+    summary: controls.summary.value,
+    url: controls.url.value,
+    priority: getDiagnosisPriority(issueData, keywords.includes("regression")),
+    keywords,
+    description,
+    seeAlso: [issueData.html_url]
+  };
 }
 
-async function populateMoveForm(sections, pathname) {
-  const issue = issueInfo(pathname);
-  if (!issue) {
-    // Not an issue page
-    return;
-  }
-  if (issue.owner !== "webcompat" || issue.repo != "web-bugs") {
-    return;
-  }
-
-  const state = new State();
-  const section = sections.get("move-form");
-
+function createIssueForm(sections, state, issue, issueData) {
+  const section = sections.get("issue-form");
   const controls = section.controls;
   Object.assign(controls, {
     summary: new Control(state, "summary"),
-    description: new Control(state, "description"),
     url: new Control(state, "url"),
-    priority: new Control(state, "priority"),
-    severity: new Control(state, "severity"),
-    keywords: new Control(state, "keywords"),
-    userStory: new Control(state, "user-story"),
-    dependsOn: new Control(state, "depends-on"),
+    operatingSystem: new Control(state, "operating-system"),
+    firefoxVersion: new Control(state, "firefox-version"),
+    str: new Control(state, "str"),
+    expectedBehavior: new Control(state, "expected-behavior"),
+    actualBehavior: new Control(state, "actual-behavior"),
+    etp: new SelectControl(state, "etp"),
+    reproduces: {
+      firefoxNightly: new CheckboxControl(state, "reproduces-firefox-nightly"),
+      firefoxRelease: new CheckboxControl(state, "reproduces-firefox-release"),
+      chrome: new CheckboxControl(state, "reproduces-chrome"),
+    },
+    extraNotes: new Control(state, "extra-notes"),
   });
 
-  section.setupDataStorage(`issueData-${issue.issueId}`);
+  const resetButton = document.getElementById("issue-form-reset");
+  resetButton.addEventListener("click", () => {
+    populateIssueForm(section, issue);
+  });
 
-  if (!await section.loadDataFromStorage()) {
-    populateFromIssue(controls, issue);
+  const nextButton = document.getElementById("issue-form-next");
+  nextButton.addEventListener("click", () => {
+    const bugFormSection = sections.get("bug-form");
+    const bugData = getBugData(issueData, controls);
+    populateBugForm(bugFormSection, bugData);
+    sections.show("bug-form");
+  });
+}
+
+function populateIssueForm(section, issueData) {
+  if (!issueData.parsedBody) {
+    issueData.parsedBody = parseIssueBody(issueData);
   }
+  const controls = section.controls;
+
+  controls.summary.state = issueData.title;
+  controls.url.state = issueData.parsedBody.url;
+  controls.operatingSystem.state = issueData.parsedBody.operating_system;
+  controls.firefoxVersion.state = issueData.parsedBody.browser_version;
+  controls.actualBehavior.state = issueData.parsedBody.description.trim();
+  controls.str.state = issueData.parsedBody.steps_to_reproduce.trim();
+}
+
+function createBugForm(sections, state, issue, issueData) {
+  const section = sections.get("bug-form");
+  const controls = section.controls;
+  Object.assign(controls, {
+    summary: new Control(state, "bug-summary"),
+    url: new Control(state, "bug-url"),
+    description: new Control(state, "description"),
+    type: new SelectControl(state, "type"),
+    priority: new Control(state, "priority"),
+    severity: new Control(state, "severity"),
+    etp: new SelectControl(state, "etp"),
+    keywords: new Control(state, "keywords"),
+    blocks: new Control(state, "blocks"),
+    dependsOn: new Control(state, "depends-on"),
+    seeAlso: new Control(state, "see-also"),
+  });
+  controls.product = new OutputControl(state, "product",
+                                       () => controls.type.value == "webcompat" ? "Web Compatibility": "Core");
+  controls.component = new OutputControl(state, "component",
+                                         () => controls.type.value == "webcompat" ? "Site Reports": "Privacy : Antitracking");
+
+
+  const backButton = document.getElementById("bug-form-back");
+  backButton.addEventListener("click", async e => {
+    sections.show("issue-form");
+  });
 
   const moveButton = document.getElementById("move-commit");
-
   moveButton.addEventListener("click", async e => {
     moveButton.disabled = true;
     const bugData = {
       summary: controls.summary.value,
       description: controls.description.value,
       url: controls.url.value,
+      product: controls.product.value,
+      component: controls.component.value,
       priority: controls.priority.value,
       severity: controls.severity.value,
       keywords: controls.keywords.value.split(",").map(x => x.trim()),
-      userStory: controls.userStory.value,
+      whiteboard: "[webcompat-source:web-bugs]",
+      blocks: controls.blocks.value.split(",").map(x => x.trim()),
       dependsOn: controls.dependsOn.value.split(",").map(x => x.trim()),
+      seeAlso: controls.seeAlso.value.split(",").map(x => x.trim()),
     };
-    let { bugzillaId } = await moveToBugzilla(bugData, issue);
-    const bugLink = document.getElementById("bug-link");
-    bugLink.href += bugzillaId;
-    bugLink.textContent = `bug ${bugzillaId}`;
-    sections.show("bug");
+    const moveResp = await moveToBugzilla(bugData, issue);
+    let bugCreatedSection = sections.get("bug-created");
+    populateBugCreated(section, moveResp);
+    sections.show("bug-created");
+    sections.serializeOnClose = false;
   });
   moveButton.disabled = false;
+}
 
-  const resetButton = document.getElementById("reset-move-form");
-  resetButton.addEventListener("click", () => {
-    section.storage.clear();
-    populateFromIssue(controls, issue);
+function populateBugForm(section, bugData) {
+  const controls = section.controls;
+
+  controls.summary.state = bugData.summary;
+  controls.description.state = bugData.description;
+  controls.url.state = bugData.url;
+  controls.priority.state = bugData.priority;
+  controls.keywords.state = bugData.keywords.join(",");
+  controls.seeAlso.state = bugData.seeAlso.join(",");
+}
+
+function createBugCreated(sections, state) {
+ const section = sections.get("bug-form");
+  const controls = section.controls;
+  Object.assign(controls, {
+    bugLink: new Link("bug-link"),
+    githubError: new UiElement("github-error"),
+    githubErrorMsg: new UiElement("github-error-msg")
   });
+}
 
-  sections.show("move-form");
+function populateBugCreated(section, moveResp) {
+  section.controls.bugLink.href += moveResp.bugzillaId;
+  section.controls.bugLink.textContent = `bug ${moveResp.bugzillaId}`;
+
+  if (moveResp.githubError) {
+    section.controls.githubErrorMsg.textContent = moveResp.githubError.message;
+    section.controls.githubError.show();
+  }
 }
 
 async function moveToBugzilla(bugData, githubData) {
@@ -201,16 +311,42 @@ async function moveToBugzilla(bugData, githubData) {
   return browser.runtime.sendMessage(msg);
 }
 
-async function render() {
+async function init() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const url = new URL(tabs[0].url);
 
-  const sections = new Sections();
-  sections.add("move-initial");
-  sections.add("move-form");
-  sections.add("move-bug");
+  const issue = issueInfo(url.pathname);
+  if (!issue) {
+    // Not an issue page
+    return;
+  }
+  if (issue.owner !== "webcompat" || issue.repo != "web-bugs") {
+    return;
+  }
 
-  populateMoveForm(sections, url.pathname);
+  const issueData = await browser.runtime.sendMessage({
+    type: "get-issue-data",
+    ...issue
+  });
+
+  console.log(url);
+
+  const state = new State();
+  const sections = new Sections(`${url.pathname}`);
+  sections.add("initial");
+  sections.add("issue-form");
+  sections.add("bug-form");
+  sections.add("bug-created");
+
+  createIssueForm(sections, state, issue, issueData);
+  createBugForm(sections, state, issue, issueData);
+  createBugCreated(sections, state);
+
+  if (!await sections.loadStoredData()) {
+    const section = sections.get("issue-form");
+    populateIssueForm(section, issueData);
+    sections.show(section.id);
+  }
 }
 
-addEventListener("DOMContentLoaded", render);
+addEventListener("DOMContentLoaded", init);

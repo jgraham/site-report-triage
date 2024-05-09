@@ -6,38 +6,91 @@
 <header>
   <h1>Move to Bugzilla</h1>
 </header>
-<section id="move-initial">
+<section id="initial">
   <p>Not a web-bug
 </section>
-<section id="move-form">
+<section id="issue-form" hidden>
   <div class="form">
     <label for=summary>Summary: </label><input id="summary">
-    <label for=description>Description:</label><textarea id="description" rows="10" cols="80"></textarea>
     <label for=url>URL:</label> <input id="url">
-    <label for=priority>Priority:</label>
-    <select id="priority">
-      <option>--</option>
-      <option>P1</option>
-      <option>P2</option>
-      <option>P3</option>
+    <label for=operating-system>Operating System:</label><input id="operating-system">
+    <label for=firefox-version>Firefox Version:</label><input id="firefox-version">
+    <label for=str>Steps to Reproduce:</label><textarea id="str"></textarea>
+    <label for=expected-behavior>Expected Behavior:</label><textarea id="expected-behavior"></textarea>
+    <label for=actual-behavior>Actual Behavior:</label><textarea id="actual-behavior"></textarea>
+    <label for="etp">ETP</label>
+    <select id="etp">
+      <option id="etp-all" value="Reproduces regardless of the status of ETP">Reproduces regardless of the status of ETP
+      <option id="etp-strict" value="Reproduces in ETP Strict Mode only">Reproduces in Strict Mode only
+      <option id ="etp-other" value="">Other (please add to description)
     </select>
-    <label for=severity>Severity:</label>
-    <select id="severity">
-      <option>--</option>
-      <option>S2</option>
-      <option>S3</option>
-      <option>S4</option>
-    </select>
-    <label for=keywords>Keywords: </label><input id="keywords">
-    <label for=user-story>User Story: </label><textarea id="user-story"></textarea>
-    <label for=depends-on>Depends on: </label><input id="depends-on">
-    <div></div>
-    <div class="actions">
-      <button id="reset-move-form">Reset</button>
-      <button id="move-commit" class="primary" disabled>Move bug</button>
-    </div>
+    <p class="label">Reproduces</p>
+    <ul class="input-list">
+      <li><label><input type=checkbox id="reproduces-firefox-nightly" value="Firefox Nightly">Firefox Nightly
+      <li><label><input type=checkbox id="reproduces-firefox-release" value="Firefox Release">Firefox Release
+      <li><label><input type=checkbox id="reproduces-chrome" value="Chrome">Chrome
+    </ul>
+    <label for=extra-notes>Extra Notes:</label><textarea id="extra-notes"></textarea>
+  </div>
+  <div class="actions">
+    <button id="issue-form-reset">Reset</button>
+    <button id="issue-form-next" class="primary">Next</button>
   </div>
 </section>
-<section id="move-bug">
+<section id="bug-form" hidden>
+  <div class="form">
+    <label for=bug-summary>Summary: </label><input id="bug-summary">
+    <label for=bug-url>URL:</label> <input id="bug-url">
+    <p class="label">Destination:</p>
+    <ul class="input-list-inline">
+      <li><label>Type
+          <select id="type">
+            <option id="bug-type-webcompat" value="webcompat">Web Compat
+            <option id="bug-type-etp" value="ETP">ETP
+          </select>
+        </label>
+      <li><output id="product"></output> ::
+      <li><output id="component"></output>
+    </ul>
+    <label for=description>Description:</label><textarea id="description" rows=10></textarea>
+    <p class="label">Bug Ranking</p>
+    <ul class="input-list-inline">
+      <li><label for="priority">Priority:</label>
+        <select id="priority">
+          <option>--</option>
+          <option>P1</option>
+          <option>P2</option>
+          <option>P3</option>
+          <option>P4</option>
+          <option>P5</option>
+        </select>
+    <li><label for="severity">Severity:</label>
+      <select id="severity">
+        <option>--</option>
+        <option>S1</option>
+        <option>S2</option>
+        <option>S3</option>
+        <option>S4</option>
+        <option>N/A</option>
+      </select>
+    </ul>
+    <label for=keywords>Keywords: </label><input id="keywords">
+    <p class="label">Bug Relations</p>
+    <ul class="input-list-inline">
+      <li> <label for=depends-on>Blocks: </label><input id="blocks">
+      <li><label for=depends-on>Depends on: </label><input id="depends-on">
+    </ul>
+    <label for=depends-on>See also: </label><input id="see-also">
+  </div>
+  <div class="actions">
+    <button id="bug-form-back">Back</button>
+    <button id="move-commit" class="primary" disabled>Move bug</button>
+  </div>
+</section>
+<section id="bug-created" hidden>
   <p>Created <a id="bug-link" href="https://bugzilla.mozilla.org/show_bug.cgi?id="></a>
+  <p id="github-error" hidden>
+    Closing GitHub Issue failed:
+    <pre id="github-error-msg"></pre>
+  </p>
 </section>

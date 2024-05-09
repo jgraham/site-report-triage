@@ -203,16 +203,6 @@ async function getRank(url) {
   return urlRank;
 }
 
-async function loadBugData(tab) {
-  const bugData = await browser.tabs.sendMessage(tab.id, {type: "read-bug-data"});
-
-  if (bugData === null) {
-    throw new Error("Unable to fetch bug data. Are you logged in?");
-  }
-
-  return bugData;
-}
-
 function selectStateFromKeywords(prefix, keywords, bugKeywords, defaultFn) {
   for (let keyword of keywords) {
     if (bugKeywords.has(keyword)) {
@@ -222,11 +212,15 @@ function selectStateFromKeywords(prefix, keywords, bugKeywords, defaultFn) {
   return defaultFn();
 }
 
-async function populateFromBug(controls, bugData) {
+async function populateTriageForm(section, bugData) {
+  const controls = section.controls;
   const optionsData = getOptionsData();
   const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
 
   controls.url.state = bugData.url;
+
+  section.controls.initialPriority.state = bugData.priority;
+  section.controls.initialSeverity.state = bugData.severity;
 
   let platforms;
   if (userStoryData.platforms) {
@@ -274,17 +268,7 @@ async function populateFromBug(controls, bugData) {
   controls.regression.state = bugData.keywords.includes("regression");
 }
 
-async function resetData(section, controls, bugData) {
-  if (!await section.loadDataFromStorage()) {
-    populateFromBug(controls, bugData);
-  }
-
-  controls.initialPriority.state = bugData.priority;
-  controls.initialSeverity.state = bugData.severity;
-}
-
-async function populateForm(tab, sections) {
-  const state = new State();
+async function createTriageForm(sections, state, tab, bugData) {
   const section  = sections.get("triage-form");
   const controls = section.controls;
 
@@ -303,14 +287,9 @@ async function populateForm(tab, sections) {
     outreach: new SelectControl(state, "outreach"),
     regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
     sitepatch: new SelectControl(state, "sitepatch"),
-    initialSeverity: new Control(state, "severity-initial", { persist: false }),
-    initialPriority: new Control(state, "priority-initial", { persist: false }),
+    initialSeverity: new Control(state, "severity-initial"),
+    initialPriority: new Control(state, "priority-initial"),
   });
-
-  const bugData = await loadBugData(tab);
-  section.setupDataStorage(`bug-${bugData.number}`);
-
-  await resetData(section, controls, bugData);
 
   const initialRank = await getRank(controls.url.value);
   const rank = state.signal(initialRank);
@@ -354,34 +333,42 @@ async function populateForm(tab, sections) {
     };
     try {
       await browser.tabs.sendMessage(tab.id, {type: "set-bug-data", ...data});
-      section.storage.clear();
+      sections.serializeOnClose = false;
     } finally {
       window.close();
     }
   });
 
   const resetButton = document.getElementById("reset-triage-form");
-  resetButton.addEventListener("click", () => {
-    console.log("resetButton.click");
-    section.storage.clear();
-    resetData(section, controls, bugData);
-  });
-
-  sections.show(section.id);
+  resetButton.addEventListener("click", () => populateTriageForm(section, bugData));
 }
 
-async function render() {
+async function init() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   const url = new URL(tab.url);
+  const params = new URLSearchParams(url.search);
 
-  const sections = new Sections();
+  const sections = new Sections(`${url.pathname}?id=${params.get("id")}`);
   sections.add("triage-initial");
   sections.add("triage-form");
-  sections.add("error");
+  sections.add("error", {persist: false});
+
+  const state = new State();
 
   try {
-    await populateForm(tab, sections);
+    const bugData = await browser.tabs.sendMessage(tab.id, {type: "read-bug-data"});
+
+    if (bugData === null) {
+      throw new Error("Unable to fetch bug data. Are you logged in?");
+    }
+    await createTriageForm(sections, state, tab, bugData);
+
+    if (!await sections.loadStoredData()) {
+      const section = sections.get("triage-form");
+      populateTriageForm(section, bugData);
+      sections.show(section.id);
+    }
   } catch(e) {
     document.getElementById("error-message").textContent = e.message;
     sections.show("error");
@@ -389,4 +376,4 @@ async function render() {
   }
 }
 
-addEventListener("DOMContentLoaded", render);
+addEventListener("DOMContentLoaded", init);

@@ -1,12 +1,20 @@
 import {StoredState} from "./state.js";
 
-class UiElement {
+export class UiElement {
   constructor(id, options = {}) {
     this.id = id;
     this.elem = document.getElementById(id);
     if (this.elem === null) {
       throw new Error(`Element ${id} not found`);
     }
+  }
+
+  get textContent() {
+    return this.elem.textContent;
+  }
+
+  set textContent(value) {
+    this.elem.textContent = value;
   }
 
   show() {
@@ -21,70 +29,133 @@ class UiElement {
 export class Section extends UiElement {
   constructor(id, options = {}) {
     super(id, options);
-    this.storage = null;
-    this.storageListener = null;
+    const {persist=true} = options;
     this.controls = {};
+    this.persist = persist;
   }
 
-  setupDataStorage(key) {
-    this.storage = new StoredState(key);
-    this.storageListener = () => storeControlsData(this.storage,
-                                                   this.controls);
-    addEventListener("blur", this.storageListener);
-  }
-
-  async loadDataFromStorage() {
-    if (this.storage === null) {
-      return false;
+  serialize() {
+    if (!this.persist) {
+      return null;
     }
-    return await loadControlsData(this.storage, this.controls);
-  };
-
-  clearDataStorage() {
-    this.storage.clear();
-  }
-
-  show() {
-    super.show();
-    if (this.storage !== null && this.storageListener === null) {
-      this.storageListener = () => storeControlsData(this.storage,
-                                                     this.controls);
-      addEventListener("blur", this.storageListener);
+    const data = {};
+    function serializeControlSet(prefix, obj) {
+      for (let [name, control] of Object.entries(obj)) {
+        const key = prefix.length > 0 ? `${prefix}.${name}` : name;
+        if (control instanceof UiElement) {
+          if (control.persist) {
+            data[key] = control.state;
+          }
+        } else {
+          serializeControlSet(key, control);
+        }
+      }
     }
+    serializeControlSet("", this.controls);
+    return data;
   }
 
-  hide() {
-    super.hide();
-    if (this.storageListener) {
-      removeEventListener("blur", this.storageListener);
-      this.storageListener = null;
+  loadSerialized(storedData) {
+    for (const [controlName, state] of Object.entries(storedData)) {
+      const keyParts = controlName.split(".");
+      let target = this.controls;
+      for (const key of keyParts) {
+        target = target[key];
+        if (!target) {
+          break;
+        }
+      }
+      if (!target) {
+        continue;
+      }
+      target.state = state;
     }
   }
 }
 
 export class Sections {
-  constructor() {
+  constructor(storageKey) {
     this.sections = new Map();
+    this.storage = new StoredState(storageKey);
+    this.serializeOnClose = true;
+    const storeData = () => {
+      if (this.serializeOnClose) {
+        this.storage.set(this.serialize());
+      } else {
+        this.storage.clear();
+      }
+    };
+    addEventListener("blur", storeData);
   }
 
-  add(id) {
-    this.sections.set(id, new Section(id));
+  add(id, options = {}) {
+    this.sections.set(id, new Section(id, options));
   }
 
   get(id) {
-    return this.sections.get(id);
-  }
-
-  show(id) {
     if (!this.sections.has(id)) {
       throw new Error(`Unknown section ${id}`);
     }
+    return this.sections.get(id);
+  }
+
+  get current() {
+    for (const section of this.sections.values()) {
+      if (!section.elem.hidden) {
+        return section;
+      }
+    }
+    return null;
+  };
+
+  serialize() {
+    const sections = {};
     for (const [secId, section] of this.sections.entries()) {
-      if (secId !== id) {
+      const sectionData = section.serialize();
+      if (sectionData) {
+        sections[section.id] = sectionData;
+      }
+    }
+    const currentSection = this.current.persist ? this.current.id : null;
+    const data = {
+      currentSection,
+      sections
+    };
+    return data;
+  }
+
+  async loadStoredData() {
+    const data = await this.storage.get();
+    console.log("loadStoredData", data);
+    if (!data) {
+      return false;
+    }
+
+    for (const [sectionId, storedData] of Object.entries(data.sections ?? {})) {
+      let section;
+      try {
+        section = this.get(sectionId);
+      } catch(e) {
+        console.warn(`Tried to load data for unknown section: ${sectionId}`);
+        continue;
+      }
+      section.loadSerialized(storedData);
+    }
+    if (data.currentSection) {
+      this.show(data.currentSection);
+    }
+    return true;
+  }
+
+  show(id) {
+    const target = this.get(id);
+
+    for (const [secId, section] of this.sections.entries()) {
+      if (section !== target) {
         section.hide();
       }
     }
-    this.sections.get(id).show();
+    target.show();
   }
 }
 
@@ -198,42 +269,12 @@ export class OutputControl extends UiElement {
   }
 }
 
-async function loadControlsData(storage, controls) {
-  const data = await storage.get();
-  if (data === null) {
-    return false;
+export class Link extends UiElement {
+  get href() {
+    return this.elem.href;
   }
-  for (const [controlName, state] of Object.entries(data)) {
-    const keyParts = controlName.split(".");
-    let target = controls;
-    for (const key of keyParts) {
-      target = target[key];
-      if (!target) {
-        break;
-      }
-    }
-    if (!target) {
-      continue;
-    }
-    target.state = state;
-  }
-  return true;
-};
 
-function storeControlsData(storage, controls) {
-  const data = {};
-  function storeControlSet(prefix, obj) {
-    for (let [name, control] of Object.entries(obj)) {
-      const key = prefix.length > 0 ? `${prefix}.${name}` : name;
-      if (control instanceof UiElement) {
-        if (control.persist) {
-          data[key] = control.state;
-        }
-      } else {
-        storeControlSet(key, control);
-      }
-    }
+  set href(value) {
+    this.elem.href = value;
   }
-  storeControlSet("", controls);
-  storage.set(data);
 }
