@@ -229,7 +229,7 @@ function createBugForm(sections, state, issue, issueData) {
   controls.product = new OutputControl(state, "product",
                                        () => controls.type.value == "webcompat" ? "Web Compatibility": "Core");
   controls.component = new OutputControl(state, "component",
-                                         () => controls.type.value == "webcompat" ? "Site Reports": "Privacy : Antitracking");
+                                         () => controls.type.value == "webcompat" ? "Site Reports": "Privacy: Anti-Tracking");
 
 
   const backButton = document.getElementById("bug-form-back");
