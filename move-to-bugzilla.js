@@ -91,6 +91,12 @@ function getDiagnosisPriority(issueData, isRegression) {
 }
 
 function getBugData(issueData, controls) {
+  let preconditionsText = "";
+  if (controls.preconditions.value.trim()) {
+    preconditionsText = `**Preconditions:**
+${controls.preconditions.value.trim()}`;
+  }
+
   let strText = "";
   if (controls.str.value.trim()) {
     strText = `**Steps to reproduce:**
@@ -108,7 +114,10 @@ ${controls.expectedBehavior.value.trim()}`;
     actualText = `**Actual Behavior:**
 ${controls.actualBehavior.value.trim()}`;
   }
-  const sectionsText = [strText, expectedText, actualText].filter(x => x.length).join("\n\n");
+  const sectionsText = [preconditionsText,
+                        strText,
+                        expectedText,
+                        actualText].filter(x => x.length).join("\n\n");
 
   let notes = [];
   if (controls.etp.state !== "other") {
@@ -173,6 +182,7 @@ function createIssueForm(sections, state, issue, issueData) {
     url: new Control(state, "url"),
     operatingSystem: new Control(state, "operating-system"),
     firefoxVersion: new Control(state, "firefox-version"),
+    preconditions: new Control(state, "preconditions"),
     str: new Control(state, "str"),
     expectedBehavior: new Control(state, "expected-behavior"),
     actualBehavior: new Control(state, "actual-behavior"),
