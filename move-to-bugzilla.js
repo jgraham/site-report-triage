@@ -129,7 +129,7 @@ ${controls.actualBehavior.value.trim()}`;
   }
   const notesText = notes.map(item => `- ${item}`).join("\n");
 
-  const type = controls.etp.state === "etp-strict" ? "ETP" : "webcompat";
+  const type = ["etp-strict", "etp-strict-standard"].includes(controls.etp.state) ? "ETP" : "webcompat";
 
   const description = `**Environment:**
 Operating system: ${controls.operatingSystem.value}
