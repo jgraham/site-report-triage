@@ -129,6 +129,8 @@ ${controls.actualBehavior.value.trim()}`;
   }
   const notesText = notes.map(item => `- ${item}`).join("\n");
 
+  const type = controls.etp.state === "etp-strict" ? "ETP" : "webcompat";
+
   const description = `**Environment:**
 Operating system: ${controls.operatingSystem.value}
 Firefox version: ${controls.firefoxVersion.value}
@@ -155,6 +157,7 @@ Created from ${issueData.html_url}
   return {
     summary: controls.summary.value,
     url: controls.url.value,
+    type,
     priority: getDiagnosisPriority(issueData, keywords.includes("regression")),
     keywords,
     description,
@@ -266,12 +269,13 @@ function createBugForm(sections, state, issue, issueData) {
 function populateBugForm(section, bugData) {
   const controls = section.controls;
 
-  controls.summary.state = bugData.summary;
-  controls.description.state = bugData.description;
-  controls.url.state = bugData.url;
-  controls.priority.state = bugData.priority;
-  controls.keywords.state = bugData.keywords.join(",");
-  controls.seeAlso.state = bugData.seeAlso.join(",");
+  controls.summary.value = bugData.summary;
+  controls.description.value = bugData.description;
+  controls.url.value = bugData.url;
+  controls.priority.value = bugData.priority;
+  controls.keywords.value = bugData.keywords.join(",");
+  controls.seeAlso.value = bugData.seeAlso.join(",");
+  controls.type.value = bugData.type;
 }
 
 function createBugCreated(sections, state) {
@@ -328,8 +332,6 @@ async function init() {
     type: "get-issue-data",
     ...issue
   });
-
-  console.log(url);
 
   const state = new State();
   const sections = new Sections(`${url.pathname}`);
