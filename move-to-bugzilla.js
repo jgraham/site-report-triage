@@ -90,6 +90,26 @@ function getDiagnosisPriority(issueData, isRegression) {
   }
 }
 
+function getOS(osString) {
+  if (/Windows/i.test(osString)) {
+    const version = /Windows (7|8|(?:10)|(?:11))/i.exec(osString);
+    if (version !== null) {
+      return `Windows ${version[1]}`;
+    }
+    return "Windows";
+  }
+  if (/Mac OS/i.test(osString) || /macOS/i.test(osString)) {
+    return "macOS";
+  }
+  if (/Linux/i.test(osString)) {
+    return "Linux";
+  }
+  if (/Android/i.test(osString)) {
+    return "Android";
+  }
+  return "Unspecified";
+}
+
 function getBugData(issueData, controls) {
   let preconditionsText = "";
   if (controls.preconditions.value.trim()) {
@@ -118,6 +138,9 @@ ${controls.actualBehavior.value.trim()}`;
                         strText,
                         expectedText,
                         actualText].filter(x => x.length).join("\n\n");
+
+  const os = getOS(controls.operatingSystem.value);
+  const platform = os === "Android" ? "ARM" : (os === "Unspecified" ? "Unspecified" : "Desktop");
 
   let notes = [];
   if (controls.etp.state !== "other") {
@@ -168,6 +191,8 @@ Created from ${issueData.html_url}
     url: controls.url.value,
     type,
     priority: getDiagnosisPriority(issueData, keywords.includes("regression")),
+    platform,
+    os,
     keywords,
     description,
     seeAlso: [issueData.html_url]
@@ -233,7 +258,8 @@ function createBugForm(sections, state, issue, issueData) {
     type: new SelectControl(state, "type"),
     priority: new Control(state, "priority"),
     severity: new Control(state, "severity"),
-    etp: new SelectControl(state, "etp"),
+    platform: new Control(state, "platform"),
+    os: new Control(state, "os"),
     keywords: new Control(state, "keywords"),
     blocks: new Control(state, "blocks"),
     dependsOn: new Control(state, "depends-on"),
@@ -259,6 +285,8 @@ function createBugForm(sections, state, issue, issueData) {
       url: controls.url.value,
       product: controls.product.value,
       component: controls.component.value,
+      opSys: controls.os.value,
+      platform: controls.platform.value,
       priority: controls.priority.value,
       severity: controls.severity.value,
       keywords: controls.keywords.value.split(",").map(x => x.trim()),
@@ -283,6 +311,8 @@ function populateBugForm(section, bugData) {
   controls.description.value = bugData.description;
   controls.url.value = bugData.url;
   controls.priority.value = bugData.priority;
+  controls.platform.value = bugData.platform;
+  controls.os.value = bugData.os;
   controls.keywords.value = bugData.keywords.join(",");
   controls.seeAlso.value = bugData.seeAlso.join(",");
   controls.type.value = bugData.type;

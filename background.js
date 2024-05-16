@@ -130,7 +130,8 @@ async function createBugzillaBug(data) {
   const {
     component,
     product,
-    opSys,
+    opSys = "Unspecified",
+    platform = "Unspecified",
     severity,
     priority,
     bugType,
@@ -153,7 +154,7 @@ async function createBugzillaBug(data) {
     type: bugType,
     version: "unspecified",
     op_sys: opSys,
-    platform: "unspecified",
+    platform,
     severity,
     priority,
     summary,

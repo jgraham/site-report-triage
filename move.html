@@ -21,9 +21,9 @@
     <label for=actual-behavior>Actual Behavior:</label><textarea id="actual-behavior"></textarea>
     <label for="etp">ETP</label>
     <select id="etp">
-      <option id="etp-all" value="Reproduces regardless of the status of ETP">Reproduces regardless of the status of ETP
+      <option id="etp-all">Reproduces regardless of the status of ETP
       <option id="etp-strict-standard" value="Reproduces in ETP Strict Mode and ETP Standard mode">Reproduces in ETP Strict and Standard modes
-      <option id="etp-strict" value="Reproduces in ETP Strict Mode only">Reproduces in ETP Strict Mode only
+      <option id="etp-strict">Reproduces in ETP Strict Mode only
       <option id="etp-other" value="">Other (please add to description)
     </select>
     <p class="label">Reproduces</p>
@@ -32,8 +32,12 @@
       <li><label><input type=checkbox id="reproduces-firefox-release" value="Firefox Release">Firefox Release
       <li><label><input type=checkbox id="reproduces-chrome" value="Chrome">Chrome
     </ul>
-    <label for=extra-notes>Extra Notes:</label><textarea id="extra-notes"></textarea>
   </div>
+  <details>
+    <div class="form">
+      <label for=extra-notes>Extra Notes:</label><textarea id="extra-notes"></textarea>
+    </div>
+  </details>
   <div class="actions">
     <button id="issue-form-reset">Reset</button>
     <button id="issue-form-next" class="primary">Next</button>
@@ -48,7 +52,7 @@
       <li><label>Type
           <select id="type">
             <option id="bug-type-webcompat" value="webcompat">Web Compat
-            <option id="bug-type-etp" value="ETP">ETP
+            <option id="bug-type-etp">ETP
           </select>
         </label>
       <li><output id="product"></output> ::
@@ -76,10 +80,33 @@
         <option>N/A</option>
       </select>
     </ul>
+    <p class="label">Platform</p>
+    <ul class="input-list-inline">
+      <li>
+        <select id="platform">
+          <option>Unspecified</option>
+          <option>Desktop</option>
+          <option>Arm</option>
+        </select>
+      <li>
+        <select id="os">
+          <option>Unspecified</option>
+          <option>All</option>
+          <option>Windows</option>
+          <option>Windows 7</option>
+          <option>Windows 8</option>
+          <option>Windows 10</option>
+          <option>Windows 11</option>
+          <option>macOS</option>
+          <option>Linux</option>
+          <option>Android</option>
+        </select>
+    </ul>
+
     <label for=keywords>Keywords: </label><input id="keywords">
     <p class="label">Bug Relations</p>
     <ul class="input-list-inline">
-      <li> <label for=depends-on>Blocks: </label><input id="blocks">
+      <li><label for=depends-on>Blocks: </label><input id="blocks">
       <li><label for=depends-on>Depends on: </label><input id="depends-on">
     </ul>
     <label for=depends-on>See also: </label><input id="see-also">
