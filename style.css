@@ -156,6 +156,14 @@ button.primary:active {
     background-color: var(--pressed-primary-button-background-color);
 }
 
+details {
+    margin: 1rem;
+}
+
+details > .form {
+    margin: 0;
+}
+
 .form {
     display: grid;
     grid-template-columns: 10rem auto;
