@@ -159,7 +159,11 @@ ${controls.actualBehavior.value.trim()}`;
   if (doesNotReproduceIn.length) {
     notes.push(`Does not reproduce in ${doesNotReproduceIn.join(', ')}`);
   }
-  const notesText = notes.map(item => `- ${item}`).join("\n");
+  let extraNotesText = "";
+  if (controls.extraNotes.value.trim().length) {
+    extraNotesText = `\n${controls.extraNotes.value}`;
+  }
+  const notesText = notes.map(item => `- ${item}`).join("\n") + extraNotesText;
 
   const type = ["etp-strict", "etp-strict-standard"].includes(controls.etp.state) ? "ETP" : "webcompat";
 
