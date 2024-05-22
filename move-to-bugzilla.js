@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Section, Sections, CheckboxControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
+import {Section, Sections, Button, CheckboxControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -222,19 +222,13 @@ function createIssueForm(sections, state, issue, issueData) {
       chrome: new CheckboxControl(state, "reproduces-chrome"),
     },
     extraNotes: new Control(state, "extra-notes"),
-  });
-
-  const resetButton = document.getElementById("issue-form-reset");
-  resetButton.addEventListener("click", () => {
-    populateIssueForm(section, issue);
-  });
-
-  const nextButton = document.getElementById("issue-form-next");
-  nextButton.addEventListener("click", () => {
-    const bugFormSection = sections.get("bug-form");
-    const bugData = getBugData(issueData, controls);
-    populateBugForm(bugFormSection, bugData);
-    sections.show("bug-form");
+    reset: new Button(state, "issue-form-reset", () => populateIssueForm(section, issue)),
+    next: new Button(state, "issue-form-next", () => {
+      const bugFormSection = sections.get("bug-form");
+      const bugData = getBugData(issueData, controls);
+      populateBugForm(bugFormSection, bugData);
+      sections.show("bug-form");
+    })
   });
 }
 
@@ -268,21 +262,15 @@ function createBugForm(sections, state, issue, issueData) {
     blocks: new Control(state, "blocks"),
     dependsOn: new Control(state, "depends-on"),
     seeAlso: new Control(state, "see-also"),
+    back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
   });
   controls.product = new OutputControl(state, "product",
                                        () => controls.type.value == "webcompat" ? "Web Compatibility": "Core");
   controls.component = new OutputControl(state, "component",
                                          () => controls.type.value == "webcompat" ? "Site Reports": "Privacy: Anti-Tracking");
 
-
-  const backButton = document.getElementById("bug-form-back");
-  backButton.addEventListener("click", async e => {
-    sections.show("issue-form");
-  });
-
-  const moveButton = document.getElementById("move-commit");
-  moveButton.addEventListener("click", async e => {
-    moveButton.disabled = true;
+  controls.moveButton = new Button(state, "move-commit", async e => {
+    controls.moveButton.elem.disabled = true;
     const bugData = {
       summary: controls.summary.value,
       description: controls.description.value,
@@ -305,7 +293,7 @@ function createBugForm(sections, state, issue, issueData) {
     sections.show("bug-created");
     sections.serializeOnClose = false;
   });
-  moveButton.disabled = false;
+  controls.moveButton.elem.disabled = false;
 }
 
 function populateBugForm(section, bugData) {
@@ -326,7 +314,7 @@ function createBugCreated(sections, state) {
  const section = sections.get("bug-form");
   const controls = section.controls;
   Object.assign(controls, {
-    bugLink: new Link("bug-link"),
+    bugLink: new Link(state, "bug-link"),
     githubError: new UiElement("github-error"),
     githubErrorMsg: new UiElement("github-error-msg")
   });
