@@ -246,7 +246,7 @@ function populateIssueForm(section, issueData) {
   controls.str.state = issueData.parsedBody.steps_to_reproduce.trim();
 }
 
-function createBugForm(sections, state, issue, issueData) {
+function createBugForm(sections, state, issue) {
   const section = sections.get("bug-form");
   const controls = section.controls;
   Object.assign(controls, {
@@ -373,7 +373,7 @@ async function init() {
   sections.add("bug-created");
 
   createIssueForm(sections, state, issue, issueData);
-  createBugForm(sections, state, issue, issueData);
+  createBugForm(sections, state, issue);
   createBugCreated(sections, state);
 
   if (!await sections.load()) {
