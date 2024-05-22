@@ -170,11 +170,10 @@ export class Sections {
 export class Control extends UiElement {
   persist = true;
 
-  constructor(state, id, options = {}) {
-    super(id, options);
+  constructor(state, idOrElem, options = {}) {
+    super(idOrElem, options);
     const {persist = true} = options;
     this.persist = persist;
-    this.elem = document.getElementById(id);
     this.signal = state.signal(this.getValueFromElement());
     this.elem.addEventListener("change", () => {
       this.signal.value = this.getValueFromElement();
@@ -216,8 +215,8 @@ export class Control extends UiElement {
 }
 
 export class CheckboxControl extends Control {
-  constructor(state, id, options = {}) {
-    super(state, id, options);
+  constructor(state, idOrElem, options = {}) {
+    super(state, idOrElem, options);
     const { defaultValue = "0" } = options;
     this.defaultValue = defaultValue;
   }
@@ -268,9 +267,8 @@ export class SelectControl extends Control {
 export class OutputControl extends UiElement {
   persist = false;
 
-  constructor(state, id, getValue, options = {}) {
-    super(id, options);
-    this.elem = document.getElementById(id);
+  constructor(state, idOrElem, getValue, options = {}) {
+    super(idOrElem, options);
     const control = this;
     state.effect(() => {
       const newValue = getValue(control);
