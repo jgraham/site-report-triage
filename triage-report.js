@@ -364,7 +364,7 @@ async function init() {
     }
     await createTriageForm(sections, state, tab, bugData);
 
-    if (!await sections.loadStoredData()) {
+    if (!await sections.load()) {
       const section = sections.get("triage-form");
       populateTriageForm(section, bugData);
       sections.show(section.id);

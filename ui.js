@@ -1,11 +1,47 @@
 import {StoredState} from "./state.js";
 
+function loadControls(controls, data) {
+  for (const [controlName, control] of Object.entries(controls)) {
+    if (data.hasOwnProperty(controlName)) {
+      const controlData = data[controlName];
+      if (control instanceof UiElement) {
+        control.load(controlData);
+      } else {
+        loadControls(control, controlData);
+      }
+    }
+  }
+}
+
+function serializeControls(controls) {
+  if (controls instanceof UiElement) {
+    if (controls.persist) {
+      return controls.serialize();
+    }
+  } else {
+    const rv = {};
+    for (let [name, control] of Object.entries(controls)) {
+      const serialized = serializeControls(control);
+      if (serialized !== undefined) {
+        rv[name] = serialized;
+      }
+    }
+    return rv;
+  }
+  return undefined;
+}
+
 export class UiElement {
-  constructor(id, options = {}) {
-    this.id = id;
-    this.elem = document.getElementById(id);
-    if (this.elem === null) {
-      throw new Error(`Element ${id} not found`);
+  constructor(idOrElem, options = {}) {
+    if (typeof idOrElem === "string") {
+      this.id = idOrElem;
+      this.elem = document.getElementById(idOrElem);
+      if (this.elem === null) {
+        throw new Error(`Element ${idOrElem} not found`);
+      }
+    } else {
+      this.id = null;
+      this.elem = idOrElem;
     }
   }
 
@@ -27,49 +63,24 @@ export class UiElement {
 }
 
 export class Section extends UiElement {
-  constructor(id, options = {}) {
-    super(id, options);
+  constructor(idOrElem, options = {}) {
+    super(idOrElem, options);
     const {persist=true} = options;
     this.controls = {};
     this.persist = persist;
+    this.localData = {};
   }
 
   serialize() {
-    if (!this.persist) {
-      return null;
-    }
-    const data = {};
-    function serializeControlSet(prefix, obj) {
-      for (let [name, control] of Object.entries(obj)) {
-        const key = prefix.length > 0 ? `${prefix}.${name}` : name;
-        if (control instanceof UiElement) {
-          if (control.persist) {
-            data[key] = control.state;
-          }
-        } else {
-          serializeControlSet(key, control);
-        }
-      }
-    }
-    serializeControlSet("", this.controls);
-    return data;
+    return {
+      localData: this.localData,
+      controls: serializeControls(this.controls)
+    };
   }
 
-  loadSerialized(storedData) {
-    for (const [controlName, state] of Object.entries(storedData)) {
-      const keyParts = controlName.split(".");
-      let target = this.controls;
-      for (const key of keyParts) {
-        target = target[key];
-        if (!target) {
-          break;
-        }
-      }
-      if (!target) {
-        continue;
-      }
-      target.state = state;
-    }
+  load(data) {
+    this.localData = data.localData ?? {};
+    loadControls(this.controls, data.controls ?? {});
   }
 }
 
@@ -124,10 +135,9 @@ export class Sections {
     return data;
   }
 
-  async loadStoredData() {
+  async load() {
     const data = await this.storage.get();
-    console.log("loadStoredData", data);
-    if (!data) {
+    if (!data || !data.currentSection) {
       return false;
     }
 
@@ -139,12 +149,10 @@ export class Sections {
         console.warn(`Tried to load data for unknown section: ${sectionId}`);
         continue;
       }
-      section.loadSerialized(storedData);
+      section.load(storedData);
     }
-    if (data.currentSection) {
-      this.show(data.currentSection);
-    }
-    return true;
+
+    this.show(data.currentSection);
   }
 
   show(id) {
@@ -196,6 +204,14 @@ export class Control extends UiElement {
 
   set state(value) {
     this.value = value;
+  }
+
+  load(value) {
+    this.state = value;
+  }
+
+  serialize() {
+    return this.state;
   }
 }
 

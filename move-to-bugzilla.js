@@ -379,7 +379,7 @@ async function init() {
 
   const state = new State();
   const sections = new Sections(`${url.pathname}`);
-  sections.add("initial");
+  sections.add("initial", {"persist": false});
   sections.add("issue-form");
   sections.add("bug-form");
   sections.add("bug-created");
@@ -388,7 +388,7 @@ async function init() {
   createBugForm(sections, state, issue, issueData);
   createBugCreated(sections, state);
 
-  if (!await sections.loadStoredData()) {
+  if (!await sections.load()) {
     const section = sections.get("issue-form");
     populateIssueForm(section, issueData);
     sections.show(section.id);
