@@ -166,6 +166,12 @@ ${controls.actualBehavior.value.trim()}`;
   const notesText = notes.map(item => `- ${item}`).join("\n") + extraNotesText;
 
   const type = ["etp-strict", "etp-strict-standard"].includes(controls.etp.state) ? "ETP" : "webcompat";
+  const blocks = [];
+  if (controls.etp.state === "ept-strict") {
+    blocks.push("1101005");
+  } else if (controls.etp.state === "ept-strict-standard") {
+    blocks.push("1480137");
+  }
 
   const description = `**Environment:**
 Operating system: ${controls.operatingSystem.value}
@@ -199,7 +205,8 @@ Created from ${issueData.html_url}
     os,
     keywords,
     description,
-    seeAlso: [issueData.html_url]
+    seeAlso: [issueData.html_url],
+    blocks
   };
 }
 
@@ -308,6 +315,7 @@ function populateBugForm(section, bugData) {
   controls.keywords.value = bugData.keywords.join(",");
   controls.seeAlso.value = bugData.seeAlso.join(",");
   controls.type.value = bugData.type;
+  controls.blocks.value = bugData.blocks;
 }
 
 function createBugCreated(sections, state) {
