@@ -14,7 +14,6 @@ const pages = [
 function pageActionClicked(tab) {
   const url = new URL(tab.url);
   const path = getPopupPath(url);
-  console.log(path);
   browser.pageAction.setPopup({tabId: tab.id, popup:path});
   browser.pageAction.openPopup();
 }
