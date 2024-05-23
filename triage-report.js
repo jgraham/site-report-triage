@@ -21,7 +21,9 @@ function getCategoryValues(prefix, elemType) {
   }).filter(x => x);
 }
 
-function getSeverity(controls, rank) {
+function getSeverity(controls, rankData) {
+  const rank = rankData ? rankData.rank : null;
+
   const impactScore = parseInt(controls.impact.value);
 
   const configurationModifier = parseFloat(controls.configuration.value);
@@ -52,17 +54,19 @@ function getSeverity(controls, rank) {
   };
 }
 
-function getPriority(rank, severity, regression) {
+function getPriority(rankData, severity, regression) {
+  const rank = rankData ? rankData.rank : null;
+
   const severityRank = parseInt(severity.severity[1]);
   let priority;
   let priorityScore;
   if (regression) {
     priority = "P1";
     priorityScore = 10;
-  } else if (rank === null || rank > 100000) {
+  } else if (rank === null || rank > 100_000) {
     priority = "P3";
     priorityScore = 1;
-  } else if (rank > 10000) {
+  } else if (rank > 10_000) {
     priorityScore = 2;
     if (severityRank >= 3) {
       priority = "P3";
@@ -247,7 +251,7 @@ async function populateTriageForm(section, bugData) {
   const keywordPrefix = "webcompat:";
   const webcompatKeywords = new Set(bugData.keywords
                                     .filter(keyword => keyword.startsWith(keywordPrefix))
-                                    .map(keyword => {console.log(keyword, keyword.slice(keywordPrefix.length)); return keyword.slice(keywordPrefix.length);}));
+                                    .map(keyword => keyword.slice(keywordPrefix.length)));
 
   controls.outreach.state = selectStateFromKeywords("outreach", ["needs-contact", "contact-ready", "sitewait"],
                                                    webcompatKeywords, () => "outreach-none");
@@ -260,8 +264,6 @@ async function populateTriageForm(section, bugData) {
                                                     return "status-needs-diagnosis";
                                                   });
 
-  console.log(selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
-                                                     webcompatKeywords, () => "sitepatch-none"));
   controls.sitepatch.state = selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
                                                      webcompatKeywords, () => "sitepatch-none");
 
