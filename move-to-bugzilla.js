@@ -90,6 +90,13 @@ function getDiagnosisPriority(issueData, isRegression) {
   }
 }
 
+function joinListStr(list) {
+  if (list.length === 1) {
+    return list[0];
+  }
+  return `${list.slice(0, list.length - 1).join(", ")}, and ${list[list.length - 1]}`;
+}
+
 function getOS(osString) {
   if (/Windows/i.test(osString)) {
     const version = /Windows (7|8|(?:10)|(?:11))/i.exec(osString);
@@ -154,10 +161,10 @@ ${controls.actualBehavior.value.trim()}`;
     target.push(ctrl.elem.value);
   }
   if (reproducesIn.length) {
-    notes.push(`Reproduces in ${reproducesIn.join(', ')}`);
+    notes.push(`Reproduces in ${joinListStr(reproducesIn)}`);
   }
   if (doesNotReproduceIn.length) {
-    notes.push(`Does not reproduce in ${doesNotReproduceIn.join(', ')}`);
+    notes.push(`Does not reproduce in ${joinListStr(doesNotReproduceIn)}`);
   }
   let extraNotesText = "";
   if (controls.extraNotes.value.trim().length) {
@@ -165,13 +172,34 @@ ${controls.actualBehavior.value.trim()}`;
   }
   const notesText = notes.map(item => `- ${item}`).join("\n") + extraNotesText;
 
-  const type = ["etp-strict", "etp-strict-standard"].includes(controls.etp.state) ? "ETP" : "webcompat";
+  const etpState = controls.etp.state;
+  const type = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
   const blocks = [];
-  if (controls.etp.state === "ept-strict") {
+
+  let closeMessage;
+  if (etpState === "etp-strict") {
     blocks.push("1101005");
-  } else if (controls.etp.state === "ept-strict-standard") {
+    closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
+
+Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
+
+  } else if (etpState === "etp-strict-standard") {
+    closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
+
+Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
     blocks.push("1480137");
+  } else {
+    let reproducesMessage = "";
+    if (reproducesIn.length) {
+      reproducesMessage += (`I was able to reproduce in ${joinListStr(reproducesIn)}`);
+    }
+    if (doesNotReproduceIn.length && reproducesMessage.length) {
+      notes.push(`, but not in ${joinListStr(doesNotReproduceIn)}`);
+    }
+    reproducesMessage += ".";
+    closeMessage = `Thanks for the report. ${reproducesMessage}`;
   }
+  closeMessage += "\n\nReproducable issues are moved to our Bugzilla component; please see: ";
 
   const description = `**Environment:**
 Operating system: ${controls.operatingSystem.value}
@@ -206,7 +234,8 @@ Created from ${issueData.html_url}
     keywords,
     description,
     seeAlso: [issueData.html_url],
-    blocks
+    blocks,
+    closeMessage,
   };
 }
 
@@ -269,6 +298,7 @@ function createBugForm(sections, state, issue) {
     blocks: new Control(state, "blocks"),
     dependsOn: new Control(state, "depends-on"),
     seeAlso: new Control(state, "see-also"),
+    closeMessage: new Control(state, "close-message"),
     back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
   });
   controls.product = new OutputControl(state, "product",
@@ -293,6 +323,7 @@ function createBugForm(sections, state, issue) {
       blocks: controls.blocks.value.split(",").map(x => x.trim()),
       dependsOn: controls.dependsOn.value.split(",").map(x => x.trim()),
       seeAlso: controls.seeAlso.value.split(",").map(x => x.trim()),
+      closeMessage: controls.closeMessage.value,
     };
     const moveResp = await moveToBugzilla(bugData, issue);
     let bugCreatedSection = sections.get("bug-created");
@@ -315,7 +346,8 @@ function populateBugForm(section, bugData) {
   controls.keywords.value = bugData.keywords.join(",");
   controls.seeAlso.value = bugData.seeAlso.join(",");
   controls.type.value = bugData.type;
-  controls.blocks.value = bugData.blocks;
+  controls.blocks.value = bugData.blocks.join(",");
+  controls.closeMessage.value = bugData.closeMessage;
 }
 
 function createBugCreated(sections, state) {
@@ -342,8 +374,6 @@ async function moveToBugzilla(bugData, githubData) {
   const msg = {
     type: "move-to-bugzilla",
     bugData: {
-      component: "Site Reports",
-      product: "Web Compatibility",
       bugType: "defect",
       ...bugData
     },

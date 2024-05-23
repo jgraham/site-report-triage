@@ -191,8 +191,9 @@ async function moveToBugzilla(data) {
   const bugzillaId = await createBugzillaBug(bugData);
   let githubError = null;
   try {
-    const comment = `Moved to bugzilla: `
-          + `https://bugzilla.mozilla.org/show_bug.cgi?id=${bugzillaId}\n`;
+    const comment = `${bugData.closeMessage} https://bugzilla.mozilla.org/show_bug.cgi?id=${bugzillaId}
+
+Closing as moved.`;
     await addGitHubComment(githubData, comment);
     if (githubData.close) {
       // Close issue
