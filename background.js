@@ -138,6 +138,7 @@ async function createBugzillaBug(data) {
     description,
     keywords,
     url,
+    whiteboard = "",
     dependsOn = [],
     userStory = "",
     blocks = [],
@@ -163,6 +164,7 @@ async function createBugzillaBug(data) {
     blocks: blocks,
     see_also: seeAlso,
     cf_user_story: userStory,
+    whiteboard,
   };
 
   if (keywords) {
