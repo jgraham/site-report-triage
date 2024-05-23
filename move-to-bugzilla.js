@@ -175,6 +175,7 @@ ${controls.actualBehavior.value.trim()}`;
   const etpState = controls.etp.state;
   const type = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
   const blocks = [];
+  const dependsOn = [];
 
   let closeMessage;
   if (etpState === "etp-strict") {

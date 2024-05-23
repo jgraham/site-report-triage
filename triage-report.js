@@ -199,6 +199,28 @@ function getKeywords(keywords, controls) {
   return newKeywords.join(", ");
 }
 
+function getDependsOn(dependsOn, controls) {
+  let addBug = null;
+  console.log(controls.impact.state);
+  if (controls.impact.state === "impact-blocked") {
+    addBug = "1886128";
+  } else if (controls.impact.state === "impact-unsupported-warning") {
+    addBug = "1886129";
+  }
+
+  console.log(addBug);
+  if (addBug === null) {
+    return dependsOn;
+  }
+
+  const entries = dependsOn.split(",").map(item => item.trim());
+  if (!entries.includes(addBug)) {
+    entries.push(addBug);
+  }
+  console.log(entries);
+  return entries.join(",");
+}
+
 async function getRank(url) {
   const urlRank = await browser.runtime.sendMessage({
     type: "get-tranco-rank",
@@ -331,7 +353,8 @@ async function createTriageForm(sections, state, tab, bugData) {
       severity: controls.severity.value,
       url: controls.url.value,
       keywords: getKeywords(bugData.keywords, controls),
-      userStory: getUserStory(bugData.cf_user_story, controls)
+      userStory: getUserStory(bugData.cf_user_story, controls),
+      dependsOn: getDependsOn(bugData.dependson, controls),
     };
     try {
       await browser.tabs.sendMessage(tab.id, {type: "set-bug-data", ...data});

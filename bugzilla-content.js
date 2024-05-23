@@ -26,6 +26,7 @@ function readBugData(data) {
     url: document.getElementById("bug_file_loc").value,
     keywords: document.getElementById("keywords").value.split(",").map(x => x.trim()),
     cf_user_story: document.getElementById("cf_user_story").value || "",
+    dependson: document.getElementById("dependson").value || "",
   };
 }
 
@@ -49,6 +50,7 @@ async function setBugData(data) {
   document.getElementById("bug_file_loc").value = data.url;
   document.getElementById("keywords").value = data.keywords;
   document.getElementById("cf_user_story").value = data.userStory;
+  document.getElementById("dependson").value = data.dependsOn;
 }
 
 async function checkElementState(elem, cond, observerOptions, options) {
