@@ -201,14 +201,12 @@ function getKeywords(keywords, controls) {
 
 function getDependsOn(dependsOn, controls) {
   let addBug = null;
-  console.log(controls.impact.state);
   if (controls.impact.state === "impact-blocked") {
     addBug = "1886128";
   } else if (controls.impact.state === "impact-unsupported-warning") {
     addBug = "1886129";
   }
 
-  console.log(addBug);
   if (addBug === null) {
     return dependsOn;
   }
@@ -217,7 +215,6 @@ function getDependsOn(dependsOn, controls) {
   if (!entries.includes(addBug)) {
     entries.push(addBug);
   }
-  console.log(entries);
   return entries.join(",");
 }
 
