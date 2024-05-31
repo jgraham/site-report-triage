@@ -4,6 +4,7 @@
     --font-family-sans-serif: sans-serif;
     --font-family-monospace: 'Menlo', 'Noto Mono', monospace;
     --foreground-color: rgb(40, 41, 42);
+    --header-foreground-color: rgb(200, 201, 202);
     --header-background-color: rgb(50, 51, 52);
     --background-color: rgb(235, 236, 237);
     --control-background-color: rgb(255, 255, 255);
@@ -75,6 +76,7 @@ header {
     display: grid;
     align-items: center;
     width: 100%;
+    color: var(--header-foreground-color);
     background-color: var(--header-background-color);
 }
 
