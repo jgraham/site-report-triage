@@ -7,6 +7,7 @@ function getOptionsData() {
     configuration: getCategoryValues("configuration", "option"),
     impact: getCategoryValues("impact", "option"),
     affects: getCategoryValues("affects", "option"),
+    diagnosisTeam: getCategoryValues("diagnosisTeam", "option"),
   };
 }
 
@@ -136,6 +137,10 @@ function extractUserStoryData(optionsData, userStory) {
         if (optionsData.affects.includes(data)) {
           rv.affects = data;
         }
+    } else if (prefix === "diagnosis-team") {
+        if (optionsData.diagnosisTeam.includes(data)) {
+          rv.diagnosisTeam = data;
+        }
     }
   }
   return rv;
@@ -150,6 +155,9 @@ function getUserStory(userStory, controls) {
     configuration: controls.configuration.state.split("-").slice(1).join("-"),
     affects: controls.affects.state.split("-").slice(1).join("-")
   };
+  if (controls.diagnosisTeam.value) {
+    data["diagnosis-team"] = controls.diagnosisTeam.value;
+  }
   const rv = [];
   for (let [prefix, value] of parseUserStory(userStory)) {
     if (!prefix) {
@@ -266,6 +274,11 @@ async function populateTriageForm(section, bugData) {
   } else {
     controls.affects.state = `affects-all`;
   }
+  if (userStoryData.diagnosisTeam) {
+    controls.diagnosisTeam.state = `diagnosisTeam-${userStoryData.diagnosisTeam}`;
+  } else {
+    controls.diagnosisTeam.state = "diagnosisTeam-none";
+  }
 
   const keywordPrefix = "webcompat:";
   const webcompatKeywords = new Set(bugData.keywords
@@ -306,6 +319,7 @@ async function createTriageForm(sections, state, tab, bugData) {
     affects: new SelectControl(state, "affects"),
     status: new SelectControl(state, "status"),
     outreach: new SelectControl(state, "outreach"),
+    diagnosisTeam: new SelectControl(state, "diagnosisTeam"),
     regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
     sitepatch: new SelectControl(state, "sitepatch"),
     initialSeverity: new Control(state, "severity-initial"),
@@ -326,6 +340,13 @@ async function createTriageForm(sections, state, tab, bugData) {
     // Weird mix of .value and .state is so this only depends on controls.status
     if (controls.status.value === "" && controls.outreach.state === "outreach-none") {
       controls.outreach.state = "outreach-needs-contact";
+    }
+  });
+
+  state.effect(() => {
+    if (controls.diagnosisTeam.state === "diagnosisTeam-none" &&
+        controls.status.value === "webcompat:needs-diagnosis") {
+      controls.diagnosisTeam.state = "diagnosisTeam-webcompat";
     }
   });
 
