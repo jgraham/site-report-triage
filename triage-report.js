@@ -182,6 +182,9 @@ function getUserStory(userStory, controls) {
 function getKeywords(keywords, controls) {
   const newKeywords = [];
   const wantKeywords = new Set();
+
+  wantKeywords.add("webcompat:site-report");
+
   for (const control of [controls.status, controls.sitepatch, controls.outreach, controls.regression]) {
     const value = control.value;
     if (value) {
