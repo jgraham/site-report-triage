@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Section, Sections, Button, CheckboxControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
+import {Section, Sections, Button, CheckboxControl, Control, Link, SelectControl, UiElement} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -176,19 +176,21 @@ ${controls.actualBehavior.value.trim()}`;
   const type = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
   const blocks = [];
   const dependsOn = [];
+  const keywords = [];
 
   let closeMessage;
   if (etpState === "etp-strict") {
-    blocks.push("1101005");
+    dependsOn.push("1101005");
     closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
 
 Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
-
+    keywords.push("webcompat:platform-bug");
   } else if (etpState === "etp-strict-standard") {
     closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
-    blocks.push("1480137");
+    dependsOn.push("1480137");
+    keywords.push("webcompat:platform-bug");
   } else {
     let reproducesMessage = "";
     if (reproducesIn.length) {
@@ -214,7 +216,6 @@ ${notesText}
 Created from ${issueData.html_url}
 `;
 
-  const keywords = [];
   if (controls.reproduces.firefoxNightly.state && !controls.reproduces.firefoxRelease.state) {
     keywords.push("regression");
   }
@@ -302,10 +303,6 @@ function createBugForm(sections, state, issue) {
     closeMessage: new Control(state, "close-message"),
     back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
   });
-  controls.product = new OutputControl(state, "product",
-                                       () => controls.type.value == "webcompat" ? "Web Compatibility": "Core");
-  controls.component = new OutputControl(state, "component",
-                                         () => controls.type.value == "webcompat" ? "Site Reports": "Privacy: Anti-Tracking");
 
   controls.moveButton = new Button(state, "move-commit", async e => {
     controls.moveButton.elem.disabled = true;
@@ -313,8 +310,8 @@ function createBugForm(sections, state, issue) {
       summary: controls.summary.value,
       description: controls.description.value,
       url: controls.url.value,
-      product: controls.product.value,
-      component: controls.component.value,
+      product: "Web Compatibility",
+      component: "Site Reports",
       opSys: controls.os.value,
       platform: controls.platform.value,
       priority: controls.priority.value,
