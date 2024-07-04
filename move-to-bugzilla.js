@@ -319,8 +319,8 @@ function createBugForm(sections, state, issue) {
       severity: controls.severity.value,
       keywords: controls.keywords.value.split(",").map(x => x.trim()),
       whiteboard: "[webcompat-source:web-bugs]",
-      blocks: controls.blocks.value.split(",").map(x => x.trim()),
-      dependsOn: controls.dependsOn.value.split(",").map(x => x.trim()),
+      blocks: controls.blocks.value.split(",").map(x => parseInt(x.trim())),
+      dependsOn: controls.dependsOn.value.split(",").map(x => parseInt(x.trim())),
       seeAlso: controls.seeAlso.value.split(",").map(x => x.trim()),
       closeMessage: controls.closeMessage.value,
     };
@@ -347,7 +347,7 @@ function populateBugForm(section, bugData) {
   controls.type.value = bugData.type;
   controls.blocks.value = bugData.blocks.join(",");
   controls.closeMessage.value = bugData.closeMessage;
-  controls.dependsOn.value = bugData.dependsOn;
+  controls.dependsOn.value = bugData.dependsOn.join(",");
 }
 
 function createBugCreated(sections, state) {
