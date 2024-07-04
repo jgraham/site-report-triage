@@ -238,6 +238,7 @@ Created from ${issueData.html_url}
     seeAlso: [issueData.html_url],
     blocks,
     closeMessage,
+    dependsOn,
   };
 }
 
@@ -346,6 +347,7 @@ function populateBugForm(section, bugData) {
   controls.type.value = bugData.type;
   controls.blocks.value = bugData.blocks.join(",");
   controls.closeMessage.value = bugData.closeMessage;
+  controls.dependsOn.value = bugData.dependsOn;
 }
 
 function createBugCreated(sections, state) {
