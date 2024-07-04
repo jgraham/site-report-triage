@@ -179,6 +179,17 @@ function getUserStory(userStory, controls) {
   return rv.join("\n");
 }
 
+function getEtpType(dependsOn) {
+  const entries = dependsOn.split(",").map(item => item.trim());
+  if (entries.includes("1101005")) {
+    return "strict";
+  }
+  if (entries.includes("1480137")) {
+    return "standard";
+  }
+  return "none";
+}
+
 function getKeywords(keywords, controls) {
   const newKeywords = [];
   const wantKeywords = new Set();
@@ -250,6 +261,7 @@ async function populateTriageForm(section, bugData) {
   const controls = section.controls;
   const optionsData = getOptionsData();
   const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
+  const etpType = getEtpType(bugData.dependson);
 
   controls.url.state = bugData.url;
 
@@ -269,6 +281,8 @@ async function populateTriageForm(section, bugData) {
   }
   if (userStoryData.configuration) {
     controls.configuration.state = `configuration-${userStoryData.configuration}`;
+  } else if(etpType === "strict") {
+    controls.configuration.state = `configuration-common`;
   } else {
      controls.configuration.state = `configuration-general`;
   }
@@ -279,6 +293,8 @@ async function populateTriageForm(section, bugData) {
   }
   if (userStoryData.diagnosisTeam) {
     controls.diagnosisTeam.state = `diagnosisTeam-${userStoryData.diagnosisTeam}`;
+  } else if (etpType != "none") {
+    controls.diagnosisTeam.state = "diagnosisTeam-privacy";
   } else {
     controls.diagnosisTeam.state = "diagnosisTeam-none";
   }
@@ -289,10 +305,13 @@ async function populateTriageForm(section, bugData) {
                                     .map(keyword => keyword.slice(keywordPrefix.length)));
 
   controls.outreach.state = selectStateFromKeywords("outreach", ["needs-contact", "contact-ready", "sitewait"],
-                                                   webcompatKeywords, () => "outreach-none");
+                                                    webcompatKeywords, () => "outreach-none");
 
   controls.status.state = selectStateFromKeywords("status", ["needs-diagnosis", "platform-bug"], webcompatKeywords,
                                                   () => {
+                                                    if (etpType != "none") {
+                                                      return "status-platform-bug";
+                                                    }
                                                     if (controls.outreach.state != "outreach-none") {
                                                       return "status-sitebug";
                                                     }
