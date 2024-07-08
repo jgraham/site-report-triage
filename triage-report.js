@@ -7,6 +7,7 @@ function getOptionsData() {
     configuration: getCategoryValues("configuration", "option"),
     impact: getCategoryValues("impact", "option"),
     affects: getCategoryValues("affects", "option"),
+    branch: getCategoryValues("branch", "option"),
     diagnosisTeam: getCategoryValues("diagnosisTeam", "option"),
   };
 }
@@ -137,6 +138,10 @@ function extractUserStoryData(optionsData, userStory) {
         if (optionsData.affects.includes(data)) {
           rv.affects = data;
         }
+    } else if (prefix === "branch") {
+        if (optionsData.branch.includes(data)) {
+          rv.branch = data;
+        }
     } else if (prefix === "diagnosis-team") {
         if (optionsData.diagnosisTeam.includes(data)) {
           rv.diagnosisTeam = data;
@@ -153,7 +158,8 @@ function getUserStory(userStory, controls) {
       .map(([name, _]) => name).join(","),
     impact: controls.impact.state.split("-").slice(1).join("-"),
     configuration: controls.configuration.state.split("-").slice(1).join("-"),
-    affects: controls.affects.state.split("-").slice(1).join("-")
+    affects: controls.affects.state.split("-").slice(1).join("-"),
+    branch: controls.branch.state.split("-").slice(1).join("-")
   };
   if (controls.diagnosisTeam.value) {
     data["diagnosis-team"] = controls.diagnosisTeam.value;
@@ -291,6 +297,11 @@ async function populateTriageForm(section, bugData) {
   } else {
     controls.affects.state = `affects-all`;
   }
+  if (userStoryData.branch) {
+    controls.branch.state = `branch-${userStoryData.branch}`;
+  } else {
+    controls.branch.state = `branch-release`;
+  }
   if (userStoryData.diagnosisTeam) {
     controls.diagnosisTeam.state = `diagnosisTeam-${userStoryData.diagnosisTeam}`;
   } else if (etpType != "none") {
@@ -339,6 +350,7 @@ async function createTriageForm(sections, state, tab, bugData) {
     impact: new SelectControl(state, "impact"),
     configuration: new SelectControl(state, "configuration"),
     affects: new SelectControl(state, "affects"),
+    branch: new SelectControl(state, "branch"),
     status: new SelectControl(state, "status"),
     outreach: new SelectControl(state, "outreach"),
     diagnosisTeam: new SelectControl(state, "diagnosisTeam"),
