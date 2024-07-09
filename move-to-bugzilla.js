@@ -202,7 +202,7 @@ Until the issue is resolved, you can work around it by disabling Enhanced Tracki
     reproducesMessage += ".";
     closeMessage = `Thanks for the report. ${reproducesMessage}`;
   }
-  closeMessage += "\n\nReproducable issues are moved to our Bugzilla component; please see: ";
+  closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
 
   const description = `**Environment:**
 Operating system: ${controls.operatingSystem.value}
