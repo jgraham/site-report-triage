@@ -202,7 +202,7 @@ function getKeywords(keywords, controls) {
 
   wantKeywords.add("webcompat:site-report");
 
-  for (const control of [controls.status, controls.sitepatch, controls.outreach, controls.regression]) {
+  for (const control of [controls.login, controls.status, controls.sitepatch, controls.outreach, controls.regression]) {
     const value = control.value;
     if (value) {
       wantKeywords.add(value);
@@ -315,6 +315,9 @@ async function populateTriageForm(section, bugData) {
                                     .filter(keyword => keyword.startsWith(keywordPrefix))
                                     .map(keyword => keyword.slice(keywordPrefix.length)));
 
+  controls.login.state = selectStateFromKeywords("login", ["needs-login", "have-login"],
+                                                 webcompatKeywords, () => "login-none");
+
   controls.outreach.state = selectStateFromKeywords("outreach", ["needs-contact", "contact-ready", "sitewait"],
                                                     webcompatKeywords, () => "outreach-none");
 
@@ -347,6 +350,7 @@ async function createTriageForm(sections, state, tab, bugData) {
       linux: new CheckboxControl(state, "platform-linux"),
       android: new CheckboxControl(state, "platform-android"),
     },
+    login: new SelectControl(state, "login"),
     impact: new SelectControl(state, "impact"),
     configuration: new SelectControl(state, "configuration"),
     affects: new SelectControl(state, "affects"),

@@ -21,7 +21,17 @@
 
     <p class="label"><label for="url">URL</label></p>
     <ul class="input-list">
-      <li><input id="url" pattern="[^\s]+">
+      <li>
+        <ul class="input-list-inline">
+          <li><input id="url" pattern="[^\s]+">
+          <li><label for="login">Login</label>
+            <select id="login">
+              <option id="login-none" value="">None
+              <option id="login-needs-login" value="webcompat:needs-login">Needs Login
+              <option id="login-have-login" value="webcompat:have-login">Have Login
+            </select>
+        </ul>
+
       <li>
         <div>
           <label for="rank">Site Rank: </label><output id="rank"></output>
