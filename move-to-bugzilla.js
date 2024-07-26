@@ -176,7 +176,7 @@ ${controls.actualBehavior.value.trim()}`;
   const type = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
   const blocks = [];
   const dependsOn = [];
-  const keywords = [];
+  const keywords = ["webcompat:site-report"];
 
   let closeMessage;
   if (etpState === "etp-strict") {
