@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Section, Sections, Button, CheckboxControl, Control, Link, SelectControl, UiElement} from "./ui.js";
+import {Section, ReadOnlySection, Sections, Button, CheckboxControl, Control, Link, SelectControl, UiElement} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -242,131 +242,135 @@ Created from ${issueData.html_url}
   };
 }
 
-function createIssueForm(sections, state, issue, issueData) {
-  const section = sections.get("issue-form");
-  const controls = section.controls;
-  Object.assign(controls, {
-    summary: new Control(state, "summary"),
-    url: new Control(state, "url"),
-    operatingSystem: new Control(state, "operating-system"),
-    firefoxVersion: new Control(state, "firefox-version"),
-    preconditions: new Control(state, "preconditions"),
-    str: new Control(state, "str"),
-    expectedBehavior: new Control(state, "expected-behavior"),
-    actualBehavior: new Control(state, "actual-behavior"),
-    etp: new SelectControl(state, "etp"),
-    reproduces: {
-      firefoxNightly: new CheckboxControl(state, "reproduces-firefox-nightly"),
-      firefoxRelease: new CheckboxControl(state, "reproduces-firefox-release"),
-      chrome: new CheckboxControl(state, "reproduces-chrome"),
-    },
-    extraNotes: new Control(state, "extra-notes"),
-    reset: new Button(state, "issue-form-reset", () => populateIssueForm(section, issue)),
-    next: new Button(state, "issue-form-next", () => {
-      const bugFormSection = sections.get("bug-form");
-      const bugData = getBugData(issueData, controls);
-      populateBugForm(bugFormSection, bugData);
-      sections.show("bug-form");
-    })
-  });
-}
-
-function populateIssueForm(section, issueData) {
-  if (!issueData.parsedBody) {
-    issueData.parsedBody = parseIssueBody(issueData);
+class IssueForm extends Section {
+  async create(state, {sections, issue, issueData}) {
+    const controls = this.controls;
+    Object.assign(controls, {
+      summary: new Control(state, "summary"),
+      url: new Control(state, "url"),
+      operatingSystem: new Control(state, "operating-system"),
+      firefoxVersion: new Control(state, "firefox-version"),
+      preconditions: new Control(state, "preconditions"),
+      str: new Control(state, "str"),
+      expectedBehavior: new Control(state, "expected-behavior"),
+      actualBehavior: new Control(state, "actual-behavior"),
+      etp: new SelectControl(state, "etp"),
+      reproduces: {
+        firefoxNightly: new CheckboxControl(state, "reproduces-firefox-nightly"),
+        firefoxRelease: new CheckboxControl(state, "reproduces-firefox-release"),
+        chrome: new CheckboxControl(state, "reproduces-chrome"),
+      },
+      extraNotes: new Control(state, "extra-notes"),
+      reset: new Button(state, "issue-form-reset", () => this.populate({issue})),
+      next: new Button(state, "issue-form-next", () => {
+        const bugFormSection = sections.get("bug-form");
+        const bugData = getBugData(issueData, controls);
+        bugFormSection.populate({bugData});
+        sections.show("bug-form");
+      })
+    });
   }
-  const controls = section.controls;
 
-  controls.summary.state = issueData.title;
-  controls.url.state = issueData.parsedBody.url;
-  controls.operatingSystem.state = issueData.parsedBody.operating_system;
-  controls.firefoxVersion.state = issueData.parsedBody.browser_version;
-  controls.actualBehavior.state = issueData.parsedBody.description.trim();
-  controls.str.state = issueData.parsedBody.steps_to_reproduce.trim();
+  async populate({issueData}) {
+    if (!issueData.parsedBody) {
+      issueData.parsedBody = parseIssueBody(issueData);
+    }
+    const controls = this.controls;
+
+    controls.summary.state = issueData.title;
+    controls.url.state = issueData.parsedBody.url;
+    controls.operatingSystem.state = issueData.parsedBody.operating_system;
+    controls.firefoxVersion.state = issueData.parsedBody.browser_version;
+    controls.actualBehavior.state = issueData.parsedBody.description.trim();
+    controls.str.state = issueData.parsedBody.steps_to_reproduce.trim();
+  }
 }
 
-function createBugForm(sections, state, issue) {
-  const section = sections.get("bug-form");
-  const controls = section.controls;
-  Object.assign(controls, {
-    summary: new Control(state, "bug-summary"),
-    url: new Control(state, "bug-url"),
-    description: new Control(state, "description"),
-    type: new SelectControl(state, "type"),
-    priority: new Control(state, "priority"),
-    severity: new Control(state, "severity"),
-    platform: new Control(state, "platform"),
-    os: new Control(state, "os"),
-    keywords: new Control(state, "keywords"),
-    blocks: new Control(state, "blocks"),
-    dependsOn: new Control(state, "depends-on"),
-    seeAlso: new Control(state, "see-also"),
-    closeMessage: new Control(state, "close-message"),
-    back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
-  });
+class BugForm extends Section {
+  async create(state, { sections, issue }) {
+    const controls = this.controls;
+    Object.assign(controls, {
+      summary: new Control(state, "bug-summary"),
+      url: new Control(state, "bug-url"),
+      description: new Control(state, "description"),
+      type: new SelectControl(state, "type"),
+      priority: new Control(state, "priority"),
+      severity: new Control(state, "severity"),
+      platform: new Control(state, "platform"),
+      os: new Control(state, "os"),
+      keywords: new Control(state, "keywords"),
+      blocks: new Control(state, "blocks"),
+      dependsOn: new Control(state, "depends-on"),
+      seeAlso: new Control(state, "see-also"),
+      closeMessage: new Control(state, "close-message"),
+      back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
+    });
 
-  controls.moveButton = new Button(state, "move-commit", async e => {
-    controls.moveButton.elem.disabled = true;
-    const bugData = {
-      summary: controls.summary.value,
-      description: controls.description.value,
-      url: controls.url.value,
-      product: "Web Compatibility",
-      component: "Site Reports",
-      opSys: controls.os.value,
-      platform: controls.platform.value,
-      priority: controls.priority.value,
-      severity: controls.severity.value,
-      keywords: controls.keywords.value.split(",").map(x => x.trim()),
-      whiteboard: "[webcompat-source:web-bugs]",
-      blocks: controls.blocks.value.split(",").map(x => parseInt(x.trim())),
-      dependsOn: controls.dependsOn.value.split(",").map(x => parseInt(x.trim())),
-      seeAlso: controls.seeAlso.value.split(",").map(x => x.trim()),
-      closeMessage: controls.closeMessage.value,
-    };
-    const moveResp = await moveToBugzilla(bugData, issue);
-    let bugCreatedSection = sections.get("bug-created");
-    populateBugCreated(section, moveResp);
-    sections.show("bug-created");
-    sections.serializeOnClose = false;
-  });
-  controls.moveButton.elem.disabled = false;
+    controls.moveButton = new Button(state, "move-commit", async e => {
+      controls.moveButton.elem.disabled = true;
+      const bugData = {
+        summary: controls.summary.value,
+        description: controls.description.value,
+        url: controls.url.value,
+        product: "Web Compatibility",
+        component: "Site Reports",
+        opSys: controls.os.value,
+        platform: controls.platform.value,
+        priority: controls.priority.value,
+        severity: controls.severity.value,
+        keywords: controls.keywords.value.split(",").map(x => x.trim()),
+        whiteboard: "[webcompat-source:web-bugs]",
+        blocks: controls.blocks.value.split(",").map(x => parseInt(x.trim())),
+        dependsOn: controls.dependsOn.value.split(",").map(x => parseInt(x.trim())),
+        seeAlso: controls.seeAlso.value.split(",").map(x => x.trim()),
+        closeMessage: controls.closeMessage.value,
+      };
+      const moveResp = await moveToBugzilla(bugData, issue);
+      let bugCreatedSection = sections.get("bug-created");
+      bugCreatedSection.populate({moveResp});
+      sections.show("bug-created");
+      sections.serializeOnClose = false;
+    });
+    controls.moveButton.elem.disabled = false;
+  }
+
+  async populate({bugData}) {
+    const controls = this.controls;
+
+    controls.summary.value = bugData.summary;
+    controls.description.value = bugData.description;
+    controls.url.value = bugData.url;
+    controls.priority.value = bugData.priority;
+    controls.platform.value = bugData.platform;
+    controls.os.value = bugData.os;
+    controls.keywords.value = bugData.keywords.join(",");
+    controls.seeAlso.value = bugData.seeAlso.join(",");
+    controls.type.value = bugData.type;
+    controls.blocks.value = bugData.blocks.join(",");
+    controls.closeMessage.value = bugData.closeMessage;
+    controls.dependsOn.value = bugData.dependsOn.join(",");
+  }
 }
 
-function populateBugForm(section, bugData) {
-  const controls = section.controls;
+class BugCreatedSection extends Section {
+  async create(state) {
 
-  controls.summary.value = bugData.summary;
-  controls.description.value = bugData.description;
-  controls.url.value = bugData.url;
-  controls.priority.value = bugData.priority;
-  controls.platform.value = bugData.platform;
-  controls.os.value = bugData.os;
-  controls.keywords.value = bugData.keywords.join(",");
-  controls.seeAlso.value = bugData.seeAlso.join(",");
-  controls.type.value = bugData.type;
-  controls.blocks.value = bugData.blocks.join(",");
-  controls.closeMessage.value = bugData.closeMessage;
-  controls.dependsOn.value = bugData.dependsOn.join(",");
-}
+    const controls = this.controls;
+    Object.assign(controls, {
+      bugLink: new Link(state, "bug-link"),
+      githubError: new UiElement("github-error"),
+      githubErrorMsg: new UiElement("github-error-msg")
+    });
+  }
 
-function createBugCreated(sections, state) {
- const section = sections.get("bug-form");
-  const controls = section.controls;
-  Object.assign(controls, {
-    bugLink: new Link(state, "bug-link"),
-    githubError: new UiElement("github-error"),
-    githubErrorMsg: new UiElement("github-error-msg")
-  });
-}
+  async populate({moveResp}) {
+    this.controls.bugLink.href += moveResp.bugzillaId;
+    this.controls.bugLink.textContent = `bug ${moveResp.bugzillaId}`;
 
-function populateBugCreated(section, moveResp) {
-  section.controls.bugLink.href += moveResp.bugzillaId;
-  section.controls.bugLink.textContent = `bug ${moveResp.bugzillaId}`;
-
-  if (moveResp.githubError) {
-    section.controls.githubErrorMsg.textContent = moveResp.githubError.message;
-    section.controls.githubError.show();
+    if (moveResp.githubError) {
+      this.controls.githubErrorMsg.textContent = moveResp.githubError.message;
+      this.controls.githubError.show();
+    }
   }
 }
 
@@ -405,18 +409,18 @@ async function init() {
 
   const state = new State();
   const sections = new Sections(`${url.pathname}`);
-  sections.add("initial", {"persist": false});
-  sections.add("issue-form");
-  sections.add("bug-form");
-  sections.add("bug-created");
+  for (const [sectionId, cls] of [["initial", ReadOnlySection],
+                                  ["issue-form", IssueForm],
+                                  ["bug-form", BugForm],
+                                  ["bug-created", BugCreatedSection]]) {
+    const section = sections.add(sectionId, cls);
+    await section.create(state, {sections, issue, issueData});
+  }
 
-  createIssueForm(sections, state, issue, issueData);
-  createBugForm(sections, state, issue);
-  createBugCreated(sections, state);
-
-  if (!await sections.load()) {
+  const loadedSection = await sections.load();
+  if (!loadedSection) {
     const section = sections.get("issue-form");
-    populateIssueForm(section, issueData);
+    section.populate({issueData});
     sections.show(section.id);
   }
 }
