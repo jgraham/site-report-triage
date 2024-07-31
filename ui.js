@@ -82,6 +82,21 @@ export class Section extends UiElement {
     this.localData = data.localData ?? {};
     loadControls(this.controls, data.controls ?? {});
   }
+
+  async create(state, options) {
+    // Create the initial state of the section
+  }
+
+  async populate(data) {
+    // Populate the section from initial data
+  }
+}
+
+export class ReadOnlySection extends Section {
+  constructor(idOrElem, options = {}) {
+    options.persist = false;
+    super(idOrElem, options);
+  }
 }
 
 export class Sections {
@@ -99,8 +114,10 @@ export class Sections {
     addEventListener("blur", storeData);
   }
 
-  add(id, options = {}) {
-    this.sections.set(id, new Section(id, options));
+  add(id, cls = Section, options = {}) {
+    const section = new cls(id, options);
+    this.sections.set(id, section);
+    return section;
   }
 
   get(id) {
@@ -138,21 +155,26 @@ export class Sections {
   async load() {
     const data = await this.storage.get();
     if (!data || !data.currentSection) {
-      return false;
+      return null;
     }
 
+    let section = null;
     for (const [sectionId, storedData] of Object.entries(data.sections ?? {})) {
-      let section;
       try {
         section = this.get(sectionId);
       } catch(e) {
         console.warn(`Tried to load data for unknown section: ${sectionId}`);
+        section = null;
         continue;
       }
       section.load(storedData);
     }
 
-    this.show(data.currentSection);
+    let current = this.get(data.currentSection);
+    if (current) {
+      this.show(current.id);
+    }
+    return current;
   }
 
   show(id) {
