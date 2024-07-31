@@ -558,7 +558,7 @@ class OutreachSection extends Section {
     const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
 
     if (userStoryData.outreachAssignee) {
-      controls.outreachAssignee.value = userStoryData.outreachAssignee;
+      controls.assignee.value = userStoryData.outreachAssignee;
     }
     if (userStoryData.outreachContactDate) {
       controls.lastContacted.value = userStoryData.outreachContactDate;
