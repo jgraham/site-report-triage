@@ -264,6 +264,13 @@ async function getRank(url) {
   return urlRank;
 }
 
+function getWebcompatKeywords(keywords) {
+  const keywordPrefix = "webcompat:";
+  return new Set(keywords
+                 .filter(keyword => keyword.startsWith(keywordPrefix))
+                 .map(keyword => keyword.slice(keywordPrefix.length)));
+}
+
 function selectStateFromKeywords(prefix, keywords, bugKeywords, defaultFn) {
   for (let keyword of keywords) {
     if (bugKeywords.has(keyword)) {
@@ -279,6 +286,23 @@ function parseUserName(user) {
     return match[1];
   }
   return user;
+}
+
+function getDefaultSection(sections, bugData) {
+  const hasImpact = /impact:/g.test(bugData.cf_user_story);
+  const outreachKeywords = new Set(["webcompat:needs-contact", "webcompat:contact-ready", "webcompat:contact-in-progress", "webcontact:contact-complete", "webcompat:sitewait"]);
+  let needsOutreach = false;
+  for (const keyword of bugData.keywords) {
+    if (outreachKeywords.has(keyword)) {
+      needsOutreach = true;
+      break;
+    }
+  }
+  let id = "triage-form";
+  if (needsOutreach && hasImpact && bugData.severity !== "--") {
+    id = "outreach-form";
+  }
+  return sections.get(id);
 }
 
 class TriageSection extends Section {
@@ -415,11 +439,7 @@ class TriageSection extends Section {
       controls.diagnosisTeam.state = "diagnosisTeam-none";
     }
 
-    const keywordPrefix = "webcompat:";
-    const webcompatKeywords = new Set(bugData.keywords
-      .filter(keyword => keyword.startsWith(keywordPrefix))
-      .map(keyword => keyword.slice(keywordPrefix.length)));
-
+    const webcompatKeywords = getWebcompatKeywords(bugData.keywords);
     controls.login.state = selectStateFromKeywords("login", ["needs-login", "have-login"],
       webcompatKeywords, () => "login-none");
 
@@ -532,8 +552,7 @@ class OutreachSection extends Section {
                                       () => this.populate({bugData}));
   }
 
-  async populate(data) {
-    const { bugData } = data;
+  async populate({bugData}) {
     const controls = this.controls;
     const optionsData = getOptionsData();
     const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
@@ -554,10 +573,12 @@ class OutreachSection extends Section {
       controls.reference.value = userStoryData.outreachResponseDate;
     }
 
-    controls.outreach.state = selectStateFromKeywords("outreachStatus",
-                                                      ["needs-contact", "contact-ready",
-                                                       "contact-in-progress", "contact-complete",
-                                                       "sitewait"]);
+    controls.status.state = selectStateFromKeywords("outreachStatus",
+                                                    ["needs-contact", "contact-ready",
+                                                     "contact-in-progress", "contact-complete",
+                                                     "sitewait"],
+                                                    getWebcompatKeywords(bugData.keywords),
+                                                    () => "outreachStatus-none");
   }
 
   getUserStory(userStory) {
@@ -613,9 +634,9 @@ async function init() {
 
     const loadedSection = await sections.load();
     if (!loadedSection) {
-      const section = sections.get("triage-form");
-      await section.populate({bugData});
-      sections.show(section.id);
+      const defaultSection = getDefaultSection(sections, bugData);
+      await defaultSection.populate({bugData});
+      sections.show(defaultSection.id);
     } else {
       sectionChooser.value = loadedSection.id;
     }
