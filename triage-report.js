@@ -570,7 +570,7 @@ class OutreachSection extends Section {
       controls.haveResponse.state = false;
     }
     if (userStoryData.outreachReference) {
-      controls.reference.value = userStoryData.outreachResponseDate;
+      controls.reference.value = userStoryData.outreachReference;
     }
 
     controls.status.state = selectStateFromKeywords("outreachStatus",
