@@ -317,7 +317,6 @@ export class Button extends UiElement {
 export class Link extends UiElement {
   constructor(state, idOrElem, options = {}) {
     super(idOrElem, options);
-    console.log(this.elem);
     const { onClick } = options;
     if (onClick) {
       this.elem.addEventListener("click", onClick);
