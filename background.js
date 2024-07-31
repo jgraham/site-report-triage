@@ -220,7 +220,7 @@ Closing as moved.`;
 }
 
 async function trancoRank(data) {
-  const {url} = data;
+  let {url} = data;
 
   if (!url) {
     return null;
