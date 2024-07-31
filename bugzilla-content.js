@@ -27,6 +27,8 @@ function readBugData(data) {
     keywords: document.getElementById("keywords").value.split(",").map(x => x.trim()),
     cf_user_story: document.getElementById("cf_user_story").value || "",
     dependson: document.getElementById("dependson").value || "",
+    // This seems like an especially hacky approach to getting this data
+    user: document.querySelector("#needinfo_role > option[value=user]").dataset["identity"],
   };
 }
 

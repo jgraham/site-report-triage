@@ -4,6 +4,10 @@
 <script src="triage-report.js" type="module"></script>
 <header>
   <h1>Triage Site Report</h1>
+  <select id="section-chooser">
+    <option value="triage-form">Triage
+    <option value="outreach-form">Outreach
+  </select>
 </header>
 <section id="triage-initial">
   <p>Not a Site Report bug
@@ -120,7 +124,6 @@
       <option id="outreach-none" value="">None
       <option id="outreach-needs-contact" value="webcompat:needs-contact">Needs Contact
       <option id="outreach-contact-ready" value="webcompat:contact-ready">Have Contact
-      <option id="outreach-sitewait" value="webcompat:site-wait">Waiting for Response
     </select>
 
     <label for="diagnosisTeam">Diagnosis Team</label>
@@ -174,6 +177,47 @@
     <p><a target="_blank" href="https://docs.google.com/document/d/1RFoVLiTGXQIbe3XZlyAkczmqlVI4NGc8TEIHdKB7-DM/edit#heading=h.85wx30ovvpn1">Triage Help</a></p>
     <button id="reset-triage-form">Reset</button>
     <button class="primary" id="update-bug">Update Bug</button>
+  </div>
+</section>
+
+<section id="outreach-form" hidden>
+  <div class="form">
+    <label for="outreachStatus">Outreach Status</label>
+    <select id="outreachStatus">
+      <option id="outreachStatus-none" value="">None
+      <option id="outreachStatus-needs-contact" value="webcompat:needs-contact">Needs Contact
+      <option id="outreachStatus-contact-ready" value="webcompat:contact-ready">Have Contact
+      <option id="outreachStatus-contact-in-progress" value="webcompat:contact-in-progress">Contact in Progress
+      <option id="outreachStatus-contact-complete" value="webcompat:contact-complete">Contact Complete
+    </select>
+
+    <label for="outreach-assignee">Assignee</label>
+    <ul class="input-list-inline">
+      <li><input id="outreach-assignee">
+      <li><button id="outreach-assign-me">Assign me</button>
+    </ul>
+
+    <label for="outreach-last-contacted">Last Contacted</label>
+    <ul class="input-list-inline">
+      <li><input type="date" id="outreach-last-contacted">
+      <li><button id="outreach-last-contacted-today">Set to today</button>
+    </ul>
+
+    <label for="outreach-last-response">Last Response</label>
+    <ul class="input-list-inline">
+      <li><label>Have response<input type=checkbox id="outreach-have-response"></label>
+      <li><input type="date" id="outreach-last-response">
+      <li><button id="outreach-last-response-today">Set to today</button>
+    </ul>
+
+    <label for="outreach-reference">Details URL</label>
+    <input id="outreach-reference">
+  </div>
+
+  <div class="actions">
+    <p><a target="_blank" href="https://docs.google.com/document/d/1RFoVLiTGXQIbe3XZlyAkczmqlVI4NGc8TEIHdKB7-DM/edit#heading=h.85wx30ovvpn1">Triage Help</a></p>
+    <button id="outreach-reset">Reset</button>
+    <button class="primary" id="outreach-update-bug">Update Bug</button>
   </div>
 </section>
 

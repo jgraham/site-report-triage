@@ -73,7 +73,8 @@ section {
 }
 
 header {
-    display: grid;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     width: 100%;
     color: var(--header-foreground-color);
@@ -85,6 +86,7 @@ h1 {
     margin-left: 1em;
     padding: 0;
     font-size: 20px;
+    display: inline-block;
 }
 
 h2 {
@@ -156,6 +158,10 @@ button.primary:hover {
 
 button.primary:active {
     background-color: var(--pressed-primary-button-background-color);
+}
+
+button[hidden] {
+    display: none;
 }
 
 details {

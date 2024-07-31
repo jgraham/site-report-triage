@@ -1,5 +1,15 @@
 import {State} from "./signal.js";
-import {Sections, Control, CheckboxControl, SelectControl, OutputControl} from "./ui.js";
+import {Section, ReadOnlySection, Sections, Button, Control, CheckboxControl, SelectControl, OutputControl} from "./ui.js";
+
+function isDateValue(data) {
+  return /\d{4}-\d{2}-\d{2}/.test(data);
+}
+
+function todayString() {
+    let date = new Date();
+    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, 0)}-${date.getDate().toString().padStart(2, 0)}`;
+
+}
 
 function getOptionsData() {
   return {
@@ -146,24 +156,24 @@ function extractUserStoryData(optionsData, userStory) {
         if (optionsData.diagnosisTeam.includes(data)) {
           rv.diagnosisTeam = data;
         }
+    } else if (prefix === "outreach-assignee") {
+      rv.outreachAssignee = data;
+    } else if (prefix === "outreach-contact-date") {
+      if (isDateValue(data)) {
+        rv.outreachContactDate = data;
+      }
+    } else if (prefix === "outreach-response-date") {
+      if (isDateValue(data)) {
+        rv.outreachResponseDate = data;
+      }
+    } else if (prefix === "outreach-reference") {
+      rv.outreachReference = data;
     }
   }
   return rv;
 }
 
-function getUserStory(userStory, controls) {
-  const data = {
-    platform: Array.from(Object.entries(controls.platforms))
-      .filter(([_, control]) => control.state)
-      .map(([name, _]) => name).join(","),
-    impact: controls.impact.state.split("-").slice(1).join("-"),
-    configuration: controls.configuration.state.split("-").slice(1).join("-"),
-    affects: controls.affects.state.split("-").slice(1).join("-"),
-    branch: controls.branch.state.split("-").slice(1).join("-")
-  };
-  if (controls.diagnosisTeam.value) {
-    data["diagnosis-team"] = controls.diagnosisTeam.value;
-  }
+function getUserStory(userStory, data) {
   const rv = [];
   for (let [prefix, value] of parseUserStory(userStory)) {
     if (!prefix) {
@@ -196,13 +206,13 @@ function getEtpType(dependsOn) {
   return "none";
 }
 
-function getKeywords(keywords, controls) {
+function getKeywords(keywords, controlsList) {
   const newKeywords = [];
   const wantKeywords = new Set();
 
   wantKeywords.add("webcompat:site-report");
 
-  for (const control of [controls.login, controls.status, controls.sitepatch, controls.outreach, controls.regression]) {
+  for (const control of controlsList) {
     const value = control.value;
     if (value) {
       wantKeywords.add(value);
@@ -263,165 +273,310 @@ function selectStateFromKeywords(prefix, keywords, bugKeywords, defaultFn) {
   return defaultFn();
 }
 
-async function populateTriageForm(section, bugData) {
-  const controls = section.controls;
-  const optionsData = getOptionsData();
-  const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
-  const etpType = getEtpType(bugData.dependson);
-
-  controls.url.state = bugData.url;
-
-  section.controls.initialPriority.state = bugData.priority;
-  section.controls.initialSeverity.state = bugData.severity;
-
-  let platforms;
-  if (userStoryData.platforms) {
-    for (const [platform, control] of Object.entries(controls.platforms)) {
-      control.state = userStoryData.platforms.includes(platform);
-    };
+function parseUserName(user) {
+  const match = /^.* \[:([^\]]+)\]$/.exec(user);
+  if (match && match[1]) {
+    return match[1];
   }
-  if (userStoryData.impact) {
-     controls.impact.state = `impact-${userStoryData.impact}`;
-  } else {
-    controls.impact.state = `impact-impact-site-broken`;
-  }
-  if (userStoryData.configuration) {
-    controls.configuration.state = `configuration-${userStoryData.configuration}`;
-  } else if(etpType === "strict") {
-    controls.configuration.state = `configuration-common`;
-  } else {
-     controls.configuration.state = `configuration-general`;
-  }
-  if (userStoryData.affects) {
-    controls.affects.state = `affects-${userStoryData.affects}`;
-  } else {
-    controls.affects.state = `affects-all`;
-  }
-  if (userStoryData.branch) {
-    controls.branch.state = `branch-${userStoryData.branch}`;
-  } else {
-    controls.branch.state = `branch-release`;
-  }
-  if (userStoryData.diagnosisTeam) {
-    controls.diagnosisTeam.state = `diagnosisTeam-${userStoryData.diagnosisTeam}`;
-  } else if (etpType != "none") {
-    controls.diagnosisTeam.state = "diagnosisTeam-privacy";
-  } else {
-    controls.diagnosisTeam.state = "diagnosisTeam-none";
-  }
-
-  const keywordPrefix = "webcompat:";
-  const webcompatKeywords = new Set(bugData.keywords
-                                    .filter(keyword => keyword.startsWith(keywordPrefix))
-                                    .map(keyword => keyword.slice(keywordPrefix.length)));
-
-  controls.login.state = selectStateFromKeywords("login", ["needs-login", "have-login"],
-                                                 webcompatKeywords, () => "login-none");
-
-  controls.outreach.state = selectStateFromKeywords("outreach", ["needs-contact", "contact-ready", "sitewait"],
-                                                    webcompatKeywords, () => "outreach-none");
-
-  controls.status.state = selectStateFromKeywords("status", ["needs-diagnosis", "platform-bug"], webcompatKeywords,
-                                                  () => {
-                                                    if (etpType != "none") {
-                                                      return "status-platform-bug";
-                                                    }
-                                                    if (controls.outreach.state != "outreach-none") {
-                                                      return "status-sitebug";
-                                                    }
-                                                    return "status-needs-diagnosis";
-                                                  });
-
-  controls.sitepatch.state = selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
-                                                     webcompatKeywords, () => "sitepatch-none");
-
-  controls.regression.state = bugData.keywords.includes("regression");
+  return user;
 }
 
-async function createTriageForm(sections, state, tab, bugData) {
-  const section  = sections.get("triage-form");
-  const controls = section.controls;
+class TriageSection extends Section {
+  async create(state, {sections, tab, bugData}) {
+    const controls = this.controls;
 
-  Object.assign(controls, {
-    url: new Control(state, "url"),
-    platforms: {
-      windows: new CheckboxControl(state, "platform-windows"),
-      mac: new CheckboxControl(state, "platform-mac"),
-      linux: new CheckboxControl(state, "platform-linux"),
-      android: new CheckboxControl(state, "platform-android"),
-    },
-    login: new SelectControl(state, "login"),
-    impact: new SelectControl(state, "impact"),
-    configuration: new SelectControl(state, "configuration"),
-    affects: new SelectControl(state, "affects"),
-    branch: new SelectControl(state, "branch"),
-    status: new SelectControl(state, "status"),
-    outreach: new SelectControl(state, "outreach"),
-    diagnosisTeam: new SelectControl(state, "diagnosisTeam"),
-    regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
-    sitepatch: new SelectControl(state, "sitepatch"),
-    initialSeverity: new Control(state, "severity-initial"),
-    initialPriority: new Control(state, "priority-initial"),
-  });
+    Object.assign(controls, {
+      url: new Control(state, "url"),
+      platforms: {
+        windows: new CheckboxControl(state, "platform-windows"),
+        mac: new CheckboxControl(state, "platform-mac"),
+        linux: new CheckboxControl(state, "platform-linux"),
+        android: new CheckboxControl(state, "platform-android"),
+      },
+      login: new SelectControl(state, "login"),
+      impact: new SelectControl(state, "impact"),
+      configuration: new SelectControl(state, "configuration"),
+      affects: new SelectControl(state, "affects"),
+      branch: new SelectControl(state, "branch"),
+      status: new SelectControl(state, "status"),
+      outreach: new SelectControl(state, "outreach"),
+      diagnosisTeam: new SelectControl(state, "diagnosisTeam"),
+      regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
+      sitepatch: new SelectControl(state, "sitepatch"),
+      initialSeverity: new Control(state, "severity-initial"),
+      initialPriority: new Control(state, "priority-initial"),
+    });
 
-  const initialRank = await getRank(controls.url.value);
-  const rank = state.signal(initialRank);
-  state.effect(async () => {
-    rank.value = await getRank(controls.url.value);
-  });
+    const initialRank = await getRank(controls.url.value);
+    const rank = state.signal(initialRank);
+    state.effect(async () => {
+      rank.value = await getRank(controls.url.value);
+    });
 
-  const severity = state.computed(() => getSeverity(controls, rank.value));
-  const priority = state.computed(() => getPriority(rank.value, severity.value, controls.regression.value));
-  const score = state.computed(() => computeScore(severity.value, priority.value));
+    const severity = state.computed(() => getSeverity(controls, rank.value));
+    const priority = state.computed(() => getPriority(rank.value, severity.value, controls.regression.value));
+    const score = state.computed(() => computeScore(severity.value, priority.value));
 
-  state.effect(() => {
-    // Weird mix of .value and .state is so this only depends on controls.status
-    if (controls.status.value === "" && controls.outreach.state === "outreach-none") {
-      controls.outreach.state = "outreach-needs-contact";
-    }
-  });
+    state.effect(() => {
+      // Weird mix of .value and .state is so this only depends on controls.status
+      if (controls.status.value === "" && controls.outreach.state === "outreach-none") {
+        controls.outreach.state = "outreach-needs-contact";
+      }
+    });
 
-  state.effect(() => {
-    if (controls.diagnosisTeam.state === "diagnosisTeam-none" &&
+    state.effect(() => {
+      if (controls.diagnosisTeam.state === "diagnosisTeam-none" &&
         controls.status.value === "webcompat:needs-diagnosis") {
-      controls.diagnosisTeam.state = "diagnosisTeam-webcompat";
-    }
-  });
+        controls.diagnosisTeam.state = "diagnosisTeam-webcompat";
+      }
+    });
 
-  controls.rank = new OutputControl(state, "rank", () => rank.value ? rank.value.rank : "null");
-  controls.rankDomain = new OutputControl(state, "rank-domain", (control) => {
-    if (rank.value) {
-      control.show();
-      return `(${rank.value.rankedDomain})`;
-    }
-    control.hide();
-    return "";
-  });
-  controls.severity = new OutputControl(state, "severity", () => severity.value.severity);
-  controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
-  controls.score = new OutputControl(state, "score", () => score.value);
+    controls.rank = new OutputControl(state, "rank", () => rank.value ? rank.value.rank : "null");
+    controls.rankDomain = new OutputControl(state, "rank-domain", (control) => {
+      if (rank.value) {
+        control.show();
+        return `(${rank.value.rankedDomain})`;
+      }
+      control.hide();
+      return "";
+    });
+    controls.severity = new OutputControl(state, "severity", () => severity.value.severity);
+    controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
+    controls.score = new OutputControl(state, "score", () => score.value);
 
-  const updateButton = document.getElementById("update-bug");
-  updateButton.addEventListener("click", async () => {
-    updateButton.disabled = true;
+    const updateButton = new Button(state, "update-bug", async () => {
+      updateButton.disabled = true;
+      const data = {
+        priority: controls.priority.value,
+        severity: controls.severity.value,
+        url: controls.url.value,
+        keywords: getKeywords(bugData.keywords, [controls.login,
+                                                 controls.status,
+                                                 controls.sitepatch,
+                                                 controls.outreach,
+                                                 controls.regression]),
+        userStory: this.getUserStory(bugData.cf_user_story),
+        dependsOn: getDependsOn(bugData.dependson, controls),
+      };
+      try {
+        await browser.tabs.sendMessage(tab.id, { type: "set-bug-data", ...data });
+        sections.serializeOnClose = false;
+      } finally {
+        window.close();
+      }
+    });
+
+    controls.resetButton = new Button(state, "reset-triage-form", () => this.populate({bugData}));
+  }
+
+  async populate({bugData}) {
+    const controls = this.controls;
+    const optionsData = getOptionsData();
+    const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
+    const etpType = getEtpType(bugData.dependson);
+
+    controls.url.state = bugData.url;
+
+    controls.initialPriority.state = bugData.priority;
+    controls.initialSeverity.state = bugData.severity;
+
+    if (userStoryData.platforms) {
+      for (const [platform, control] of Object.entries(controls.platforms)) {
+        control.state = userStoryData.platforms.includes(platform);
+      };
+    }
+    if (userStoryData.impact) {
+      controls.impact.state = `impact-${userStoryData.impact}`;
+    } else {
+      controls.impact.state = `impact-impact-site-broken`;
+    }
+    if (userStoryData.configuration) {
+      controls.configuration.state = `configuration-${userStoryData.configuration}`;
+    } else if (etpType === "strict") {
+      controls.configuration.state = `configuration-common`;
+    } else {
+      controls.configuration.state = `configuration-general`;
+    }
+    if (userStoryData.affects) {
+      controls.affects.state = `affects-${userStoryData.affects}`;
+    } else {
+      controls.affects.state = `affects-all`;
+    }
+    if (userStoryData.branch) {
+      controls.branch.state = `branch-${userStoryData.branch}`;
+    } else {
+      controls.branch.state = `branch-release`;
+    }
+    if (userStoryData.diagnosisTeam) {
+      controls.diagnosisTeam.state = `diagnosisTeam-${userStoryData.diagnosisTeam}`;
+    } else if (etpType != "none") {
+      controls.diagnosisTeam.state = "diagnosisTeam-privacy";
+    } else {
+      controls.diagnosisTeam.state = "diagnosisTeam-none";
+    }
+
+    const keywordPrefix = "webcompat:";
+    const webcompatKeywords = new Set(bugData.keywords
+      .filter(keyword => keyword.startsWith(keywordPrefix))
+      .map(keyword => keyword.slice(keywordPrefix.length)));
+
+    controls.login.state = selectStateFromKeywords("login", ["needs-login", "have-login"],
+      webcompatKeywords, () => "login-none");
+
+    controls.outreach.state = selectStateFromKeywords("outreach",
+      ["needs-contact", "contact-ready",
+        "contact-in-progress", "contact-complete",
+        "sitewait"],
+      webcompatKeywords, () => "outreach-none");
+
+    controls.status.state = selectStateFromKeywords("status", ["needs-diagnosis", "platform-bug"], webcompatKeywords,
+      () => {
+        if (etpType != "none") {
+          return "status-platform-bug";
+        }
+        if (controls.outreach.state != "outreach-none") {
+          return "status-sitebug";
+        }
+        return "status-needs-diagnosis";
+      });
+
+    controls.sitepatch.state = selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
+      webcompatKeywords, () => "sitepatch-none");
+
+    controls.regression.state = bugData.keywords.includes("regression");
+  }
+
+  getUserStory(userStory) {
+    const controls = this.controls;
     const data = {
-      priority: controls.priority.value,
-      severity: controls.severity.value,
-      url: controls.url.value,
-      keywords: getKeywords(bugData.keywords, controls),
-      userStory: getUserStory(bugData.cf_user_story, controls),
-      dependsOn: getDependsOn(bugData.dependson, controls),
+      platform: Array.from(Object.entries(controls.platforms))
+        .filter(([_, control]) => control.state)
+        .map(([name, _]) => name).join(","),
+      impact: controls.impact.state.split("-").slice(1).join("-"),
+      configuration: controls.configuration.state.split("-").slice(1).join("-"),
+      affects: controls.affects.state.split("-").slice(1).join("-"),
+      branch: controls.branch.state.split("-").slice(1).join("-")
     };
-    try {
-      await browser.tabs.sendMessage(tab.id, {type: "set-bug-data", ...data});
-      sections.serializeOnClose = false;
-    } finally {
-      window.close();
+    if (controls.diagnosisTeam.value) {
+      data["diagnosis-team"] = controls.diagnosisTeam.value;
     }
-  });
+    return getUserStory(userStory, data);
+  }
+}
 
-  const resetButton = document.getElementById("reset-triage-form");
-  resetButton.addEventListener("click", () => populateTriageForm(section, bugData));
+class OutreachSection extends Section {
+  async create(state, {sections, tab, bugData}) {
+    const controls = this.controls;
+
+    Object.assign(controls, {
+      status: new SelectControl(state, "outreachStatus"),
+      assignee: new Control(state, "outreach-assignee"),
+      lastContacted: new Control(state, "outreach-last-contacted"),
+      haveResponse: new CheckboxControl(state, "outreach-have-response"),
+      lastResponse: new Control(state, "outreach-last-response"),
+      reference: new Control(state, "outreach-reference"),
+    });
+
+    controls.assignMeButton = new Button(state, "outreach-assign-me", () => {
+      controls.assignee.value = parseUserName(bugData.user);
+    }),
+
+      controls.lastContactedToday = new Button(state, "outreach-last-contacted-today", () => {
+        controls.lastContacted.value = todayString();
+      });
+
+    controls.lastResponseToday = new Button(state, "outreach-last-response-today", () => {
+      controls.lastResponse.value = todayString();
+    });
+
+    state.effect(() => {
+      if (controls.lastContacted.value) {
+        if (["outreachStatus-none", "outreachStatus-needs-contact", "outreachStatus-have-contact"].includes(controls.status.state)) {
+          controls.status.state = "outreachStatus-contact-in-progress";
+        }
+      }
+    });
+
+    state.effect(() => {
+      let responseEnabled = controls.haveResponse.value === "on";
+      if (responseEnabled) {
+        controls.lastResponse.show();
+        controls.lastResponseToday.show();
+        if (!controls.lastResponse.value) {
+          controls.lastResponse.value = todayString();
+        }
+        if (["outreachStatus-none", "outreachStatus-needs-contact", "outreachStatus-have-contact"].includes(controls.status.state)) {
+          controls.status.state = "outreachStatus-contact-in-progress";
+        }
+      } else {
+        controls.lastResponse.hide();
+        controls.lastResponseToday.hide();
+      }
+    });
+
+    const updateButton = new Button(state, "outreach-update-bug", async () => {
+      updateButton.disabled = true;
+      const data = {
+        keywords: getKeywords(bugData.keywords, [controls.status]),
+        userStory: this.getUserStory(bugData.cf_user_story),
+      };
+      try {
+        await browser.tabs.sendMessage(tab.id, { type: "set-bug-data", ...data });
+        sections.serializeOnClose = false;
+      } finally {
+        window.close();
+      }
+    });
+
+    controls.resetButton = new Button(state, "outreach-reset",
+                                      () => this.populate({bugData}));
+  }
+
+  async populate(data) {
+    const { bugData } = data;
+    const controls = this.controls;
+    const optionsData = getOptionsData();
+    const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
+
+    if (userStoryData.outreachAssignee) {
+      controls.outreachAssignee.value = userStoryData.outreachAssignee;
+    }
+    if (userStoryData.outreachContactDate) {
+      controls.lastContacted.value = userStoryData.outreachContactDate;
+    }
+    if (userStoryData.outreachResponseDate) {
+      controls.haveResponse.state = true;
+      controls.lastResponse.value = userStoryData.outreachResponseDate;
+    } else {
+      controls.haveResponse.state = false;
+    }
+    if (userStoryData.outreachReference) {
+      controls.reference.value = userStoryData.outreachResponseDate;
+    }
+
+    controls.outreach.state = selectStateFromKeywords("outreachStatus",
+                                                      ["needs-contact", "contact-ready",
+                                                       "contact-in-progress", "contact-complete",
+                                                       "sitewait"]);
+  }
+
+  getUserStory(userStory) {
+    const controls = this.controls;
+    const data = {};
+    if (controls.assignee.value.trim()) {
+      data["outreach-assignee"] = controls.assignee.value.trim();
+    }
+    if (controls.lastContacted.value) {
+      data["outreach-contact-date"] = controls.lastContacted.value;
+    }
+    if (controls.haveResponse.state && controls.lastResponse.value) {
+      data["outreach-response-date"] = controls.lastResponse.value;
+    }
+    if (controls.reference.value.trim()) {
+      data["outreach-reference"] = controls.reference.value.trim();
+    }
+    return getUserStory(userStory, data);
+  }
 }
 
 async function init() {
@@ -431,9 +586,13 @@ async function init() {
   const params = new URLSearchParams(url.search);
 
   const sections = new Sections(`${url.pathname}?id=${params.get("id")}`);
-  sections.add("triage-initial");
-  sections.add("triage-form");
-  sections.add("error", {persist: false});
+
+  for (const [sectionId, cls] of [["triage-initial", Section],
+                                  ["triage-form", TriageSection],
+                                  ["outreach-form", OutreachSection],
+                                  ["error", ReadOnlySection]]) {
+    sections.add(sectionId, cls);
+  }
 
   const state = new State();
 
@@ -443,12 +602,22 @@ async function init() {
     if (bugData === null) {
       throw new Error("Unable to fetch bug data. Are you logged in?");
     }
-    await createTriageForm(sections, state, tab, bugData);
+    for (const section of sections.sections.values()) {
+      await section.create(state, {sections, tab, bugData});
+    }
 
-    if (!await sections.load()) {
+    const sectionChooser = new SelectControl(state, "section-chooser");
+    state.effect(() => {
+      sections.show(sectionChooser.value);
+    });
+
+    const loadedSection = await sections.load();
+    if (!loadedSection) {
       const section = sections.get("triage-form");
-      populateTriageForm(section, bugData);
+      await section.populate({bugData});
       sections.show(section.id);
+    } else {
+      sectionChooser.value = loadedSection.id;
     }
   } catch(e) {
     document.getElementById("error-message").textContent = e.message;
