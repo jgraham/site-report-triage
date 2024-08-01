@@ -32,6 +32,13 @@ function readBugData(data) {
   };
 }
 
+function setElementValue(id, value) {
+  if (value !== undefined) {
+    const elem = document.getElementById(id);
+    elem.value = value;
+  }
+}
+
 async function setBugData(data) {
   for (const id of ["mode-btn", "user-story-edit-btn"]) {
     const editButton = document.getElementById(id);
@@ -47,12 +54,12 @@ async function setBugData(data) {
     await checkElementState(select, selectLoaded, {childList: true, subtree: true}, {timeout: 5000});
   }
 
-  document.getElementById("priority").value = data.priority;
-  document.getElementById("bug_severity").value = data.severity;
-  document.getElementById("bug_file_loc").value = data.url;
-  document.getElementById("keywords").value = data.keywords;
-  document.getElementById("cf_user_story").value = data.userStory;
-  document.getElementById("dependson").value = data.dependsOn;
+  setElementValue("priority", data.priority);
+  setElementValue("bug_severity", data.severity);
+  setElementValue("bug_file_loc", data.url);
+  setElementValue("keywords", data.keywords);
+  setElementValue("cf_user_story", data.userStory);
+  setElementValue("dependson", data.dependsOn);
 }
 
 async function checkElementState(elem, cond, observerOptions, options) {
