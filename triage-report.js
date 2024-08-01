@@ -185,8 +185,6 @@ function getUserStory(userStory, data) {
     }
     if (value !== null) {
       rv.push(`${prefix}:${value}`);
-    } else {
-      rv.push(prefix);
     }
   }
   for (let [prefix, value] of Object.entries(data)) {
@@ -479,6 +477,8 @@ class TriageSection extends Section {
     };
     if (controls.diagnosisTeam.value) {
       data["diagnosis-team"] = controls.diagnosisTeam.value;
+    } else {
+      data["diagnosis-team"] = null;
     }
     return getUserStory(userStory, data);
   }
@@ -586,15 +586,23 @@ class OutreachSection extends Section {
     const data = {};
     if (controls.assignee.value.trim()) {
       data["outreach-assignee"] = controls.assignee.value.trim();
+    } else {
+      data["outreach-assignee"] = null;
     }
     if (controls.lastContacted.value) {
       data["outreach-contact-date"] = controls.lastContacted.value;
+    } else {
+      data["outreach-contact-date"] = null;
     }
     if (controls.haveResponse.state && controls.lastResponse.value) {
       data["outreach-response-date"] = controls.lastResponse.value;
+    } else {
+      data["outreach-respose-date"] = null;
     }
     if (controls.reference.value.trim()) {
       data["outreach-reference"] = controls.reference.value.trim();
+    } else {
+      data["outreach-reference"] = null;
     }
     return getUserStory(userStory, data);
   }
