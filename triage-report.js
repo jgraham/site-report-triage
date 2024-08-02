@@ -660,7 +660,7 @@ async function init() {
     const loadedSection = await sections.load();
     if (!loadedSection) {
       const defaultSection = getDefaultSection(sections, bugData);
-      await defaultSection.populate({bugData});
+      await sections.populate({bugData});
       sections.show(defaultSection.id);
       sectionChooser.value = defaultSection.id;
     } else {

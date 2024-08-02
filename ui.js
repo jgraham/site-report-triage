@@ -136,9 +136,13 @@ export class Sections {
     return null;
   };
 
+  async populate(data) {
+    await Promise.all(Array.from(this.sections.values()).map(section => section.populate(data)));
+  }
+
   serialize() {
     const sections = {};
-    for (const [secId, section] of this.sections.entries()) {
+    for (const section of this.sections.values()) {
       const sectionData = section.serialize();
       if (sectionData) {
         sections[section.id] = sectionData;
@@ -180,7 +184,7 @@ export class Sections {
   show(id) {
     const target = this.get(id);
 
-    for (const [secId, section] of this.sections.entries()) {
+    for (const section of this.sections.values()) {
       if (section !== target) {
         section.hide();
       }
