@@ -205,12 +205,17 @@ function getEtpType(dependsOn) {
 }
 
 function getKeywords(keywords, controlsList) {
+  const requiredKeywords = ["webcompat:site-report"];
+  const settableKeywords = new Set(requiredKeywords);
+  const wantKeywords = new Set(requiredKeywords);
   const newKeywords = [];
-  const wantKeywords = new Set();
 
-  wantKeywords.add("webcompat:site-report");
+  wantKeywords.add();
 
   for (const control of controlsList) {
+    for (const value of control.values()) {
+      settableKeywords.add(value);
+    }
     const value = control.value;
     if (value) {
       wantKeywords.add(value);
@@ -218,18 +223,21 @@ function getKeywords(keywords, controlsList) {
   }
 
   for (const keyword of keywords) {
-    if (keyword.startsWith("webcompat:") || keyword === "regression") {
+    if (settableKeywords.has(keyword)) {
       if (wantKeywords.has(keyword)) {
         newKeywords.push(keyword);
         wantKeywords.delete(keyword);
       }
+      // Otherwise the keyword should be removed
     } else {
       newKeywords.push(keyword);
     }
   }
 
   for (const keyword of wantKeywords) {
-    newKeywords.push(keyword);
+    if (keyword) {
+      newKeywords.push(keyword);
+    }
   }
 
   return newKeywords.join(", ");
@@ -511,7 +519,7 @@ class OutreachSection extends Section {
 
     state.effect(() => {
       if (controls.lastContacted.value) {
-        if (["outreachStatus-none", "outreachStatus-needs-contact", "outreachStatus-have-contact"].includes(controls.status.state)) {
+        if (["outreachStatus-none", "outreachStatus-needs-contact", "outreachStatus-contact-ready"].includes(controls.status.state)) {
           controls.status.state = "outreachStatus-contact-in-progress";
         }
       }

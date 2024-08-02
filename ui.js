@@ -263,6 +263,10 @@ export class CheckboxControl extends Control {
     this.elem.checked = value;
     this.signal.value = this.getValueFromElement();
   }
+
+  values() {
+    return new Set([this.elem.value, ""]);
+  }
 }
 
 export class SelectControl extends Control {
@@ -283,6 +287,14 @@ export class SelectControl extends Control {
       }
     }
     this.signal.value = this.elem.value;
+  }
+
+  values() {
+    const values = new Set();
+    for (const option of this.elem.options) {
+      values.add(option.value);
+    }
+    return values;
   }
 }
 
