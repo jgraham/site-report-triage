@@ -188,7 +188,9 @@ function getUserStory(userStory, data) {
     }
   }
   for (let [prefix, value] of Object.entries(data)) {
-    rv.push(`${prefix}:${value}`);
+    if (value !== null) {
+      rv.push(`${prefix}:${value}`);
+    }
   }
   return rv.join("\n");
 }
@@ -567,18 +569,25 @@ class OutreachSection extends Section {
 
     if (userStoryData.outreachAssignee) {
       controls.assignee.value = userStoryData.outreachAssignee;
+    } else {
+      controls.assignee.value = "";
     }
     if (userStoryData.outreachContactDate) {
       controls.lastContacted.value = userStoryData.outreachContactDate;
+    } else {
+      controls.lastContacted.value = "";
     }
     if (userStoryData.outreachResponseDate) {
       controls.haveResponse.state = true;
       controls.lastResponse.value = userStoryData.outreachResponseDate;
     } else {
       controls.haveResponse.state = false;
+      controls.lastResponse.value = "";
     }
     if (userStoryData.outreachReference) {
       controls.reference.value = userStoryData.outreachReference;
+    } else {
+      controls.reference.value = "";
     }
 
     controls.status.state = selectStateFromKeywords("outreachStatus",
@@ -605,7 +614,7 @@ class OutreachSection extends Section {
     if (controls.haveResponse.state && controls.lastResponse.value) {
       data["outreach-response-date"] = controls.lastResponse.value;
     } else {
-      data["outreach-respose-date"] = null;
+      data["outreach-response-date"] = null;
     }
     if (controls.reference.value.trim()) {
       data["outreach-reference"] = controls.reference.value.trim();
