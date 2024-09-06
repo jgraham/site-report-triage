@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Section, ReadOnlySection, Sections, Button, CheckboxControl, Control, Link, SelectControl, UiElement} from "./ui.js";
+import {Section, ReadOnlySection, Sections, Button, CheckboxControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -306,14 +306,20 @@ class BugForm extends Section {
       back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
     });
 
+    controls.product = new OutputControl(state, "product",
+                                         () => controls.type.value == "webcompat" ? "Web Compatibility": "Core");
+    controls.component = new OutputControl(state, "component",
+                                           () => controls.type.value == "webcompat" ? "Site Reports": "Privacy: Site Reports");
+
+
     controls.moveButton = new Button(state, "move-commit", async e => {
       controls.moveButton.elem.disabled = true;
       const bugData = {
         summary: controls.summary.value,
         description: controls.description.value,
         url: controls.url.value,
-        product: "Web Compatibility",
-        component: "Site Reports",
+        product: controls.product.value,
+        component: controls.component.value,
         opSys: controls.os.value,
         platform: controls.platform.value,
         priority: controls.priority.value,
