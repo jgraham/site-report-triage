@@ -306,8 +306,7 @@ class BugForm extends Section {
       back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
     });
 
-    controls.product = new OutputControl(state, "product",
-                                         () => controls.type.value == "webcompat" ? "Web Compatibility": "Core");
+    controls.product = new OutputControl(state, "product", () => "Web Compatibility");
     controls.component = new OutputControl(state, "component",
                                            () => controls.type.value == "webcompat" ? "Site Reports": "Privacy: Site Reports");
 
