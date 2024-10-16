@@ -21,16 +21,16 @@
     <label for=actual-behavior>Actual Behavior:</label><textarea id="actual-behavior"></textarea>
     <label for="etp">ETP</label>
     <select id="etp">
-      <option id="etp-all">Reproduces regardless of the status of ETP
-      <option id="etp-strict-standard" value="Reproduces in ETP Strict Mode and ETP Standard mode">Reproduces in ETP Strict and Standard modes
-      <option id="etp-strict">Reproduces in ETP Strict Mode only
-      <option id="etp-other" value="">Other (please add to description)
+      <option data-state="all">Reproduces regardless of the status of ETP
+      <option data-state="strict-standard" value="Reproduces in ETP Strict Mode and ETP Standard mode">Reproduces in ETP Strict and Standard modes
+      <option data-state="strict">Reproduces in ETP Strict Mode only
+      <option data-state="other" value="">Other (please add to description)
     </select>
     <p class="label">Reproduces</p>
-    <ul class="input-list-inline">
-      <li><label><input type=checkbox id="reproduces-firefox-nightly" value="Firefox Nightly">Firefox Nightly
-      <li><label><input type=checkbox id="reproduces-firefox-release" value="Firefox Release">Firefox Release
-      <li><label><input type=checkbox id="reproduces-chrome" value="Chrome">Chrome
+    <ul class="input-list-inline" id="reproduces">
+      <li><label><input type=checkbox name="firefox-nightly" value="Firefox Nightly">Firefox Nightly
+      <li><label><input type=checkbox name="firefox-release" value="Firefox Release">Firefox Release
+      <li><label><input type=checkbox name="chrome" value="Chrome">Chrome
     </ul>
   </div>
   <details>
@@ -51,9 +51,10 @@
     <p class="label">Destination:</p>
     <ul class="input-list-inline">
       <li><label>Type
-          <select id="type">
-            <option id="bug-type-webcompat" value="webcompat">Web Compat
-            <option id="bug-type-etp">ETP
+          <select id="bug-type" data-default-state="webcompat">
+            <option data-state="webcompat" value="webcompat">Web Compat
+            <option data-state="etp">ETP
+            <option data-state="performance">Performance
           </select>
         </label>
       <li><output id="product"></output> :: <output id="component"></output>

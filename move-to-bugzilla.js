@@ -1,5 +1,5 @@
 import {State} from "./signal.js";
-import {Section, ReadOnlySection, Sections, Button, CheckboxControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
+import {Section, ReadOnlySection, Sections, Button, CheckboxListControl, Control, Link, OutputControl, SelectControl, UiElement} from "./ui.js";
 
 function issueInfo(pathname) {
   // Expected pathname is like
@@ -155,10 +155,9 @@ ${controls.actualBehavior.value.trim()}`;
   }
   const reproducesIn = [];
   const doesNotReproduceIn = [];
-  for (const ctrl of Object.values(controls.reproduces)) {
-    const target = ctrl.state ? reproducesIn : doesNotReproduceIn;
-    // Want the value even if the checkbox is unticked
-    target.push(ctrl.elem.value);
+  for (const control of controls.reproduces.checkboxes) {
+    const target = control.state ? reproducesIn : doesNotReproduceIn;
+    target.push(control.name);
   }
   if (reproducesIn.length) {
     notes.push(`Reproduces in ${joinListStr(reproducesIn)}`);
@@ -173,7 +172,7 @@ ${controls.actualBehavior.value.trim()}`;
   const notesText = notes.map(item => `- ${item}`).join("\n") + extraNotesText;
 
   const etpState = controls.etp.state;
-  const type = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
+  const bugType = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
   const blocks = [];
   const dependsOn = [];
   const keywords = ["webcompat:site-report"];
@@ -216,7 +215,7 @@ ${notesText}
 Created from ${issueData.html_url}
 `;
 
-  if (controls.reproduces.firefoxNightly.state && !controls.reproduces.firefoxRelease.state) {
+  if (reproducesIn.includes("firefox-nightly") && !reproducesIn.includes("firefox-release")) {
     keywords.push("regression");
   }
   if (issueData.milestone.title === "needsdiagnosis") {
@@ -229,7 +228,7 @@ Created from ${issueData.html_url}
   return {
     summary: controls.summary.value,
     url: controls.url.value,
-    type,
+    bugType,
     priority: getDiagnosisPriority(issueData, keywords.includes("regression")),
     platform,
     os,
@@ -255,11 +254,7 @@ class IssueForm extends Section {
       expectedBehavior: new Control(state, "expected-behavior"),
       actualBehavior: new Control(state, "actual-behavior"),
       etp: new SelectControl(state, "etp"),
-      reproduces: {
-        firefoxNightly: new CheckboxControl(state, "reproduces-firefox-nightly"),
-        firefoxRelease: new CheckboxControl(state, "reproduces-firefox-release"),
-        chrome: new CheckboxControl(state, "reproduces-chrome"),
-      },
+      reproduces: new CheckboxListControl(state, "reproduces"),
       extraNotes: new Control(state, "extra-notes"),
       reset: new Button(state, "issue-form-reset", () => this.populate({issue})),
       next: new Button(state, "issue-form-next", () => {
@@ -293,7 +288,7 @@ class BugForm extends Section {
       summary: new Control(state, "bug-summary"),
       url: new Control(state, "bug-url"),
       description: new Control(state, "description"),
-      type: new SelectControl(state, "type"),
+      bugType: new SelectControl(state, "bug-type"),
       priority: new Control(state, "priority"),
       severity: new Control(state, "severity"),
       platform: new Control(state, "platform"),
@@ -306,10 +301,23 @@ class BugForm extends Section {
       back: new Button(state, "bug-form-back", () => sections.show("issue-form"))
     });
 
-    controls.product = new OutputControl(state, "product", () => "Web Compatibility");
-    controls.component = new OutputControl(state, "component",
-                                           () => controls.type.value == "webcompat" ? "Site Reports": "Privacy: Site Reports");
-
+    controls.product = new OutputControl(state, "product", () => {
+      const bugType = controls.bugType.value;
+      if (bugType === "Performance") {
+        return "Core";
+      }
+      return "Web Compatibility";
+    });
+    controls.component = new OutputControl(state, "component", () => {
+      const bugType = controls.bugType.value;
+      if (bugType === "ETP") {
+        return "Privacy: Site Reports";
+      }
+      if (bugType === "Performance") {
+        return "Performance";
+      }
+      return "Site Reports";
+    });
 
     controls.moveButton = new Button(state, "move-commit", async e => {
       controls.moveButton.elem.disabled = true;
@@ -350,7 +358,7 @@ class BugForm extends Section {
     controls.os.value = bugData.os;
     controls.keywords.value = bugData.keywords.join(",");
     controls.seeAlso.value = bugData.seeAlso.join(",");
-    controls.type.value = bugData.type;
+    controls.bugType.value = bugData.bugType;
     controls.blocks.value = bugData.blocks.join(",");
     controls.closeMessage.value = bugData.closeMessage;
     controls.dependsOn.value = bugData.dependsOn.join(",");

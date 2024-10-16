@@ -1,8 +1,148 @@
 import {State} from "./signal.js";
-import {Section, ReadOnlySection, Sections, Button, Control, CheckboxControl, SelectControl, OutputControl} from "./ui.js";
+import {Section, ReadOnlySection, Sections, Button, Control, CheckboxControl, CheckboxListControl, DateControl, SelectControl, OutputControl} from "./ui.js";
 
-function isDateValue(data) {
-  return /\d{4}-\d{2}-\d{2}/.test(data);
+class UserStory {
+  constructor(userStory) {
+    this.data = new Map();
+    for (const [prefix, data] of this.parse(userStory)) {
+      if (prefix && data !== null) {
+        this.data.set(prefix, data);
+      }
+    }
+  }
+
+  *parse(userStory) {
+    const lines = userStory.split(/\r?\n|\r|\n/g);
+    for (const line of lines) {
+      const [prefix, ...rest] = line.split(":");
+      const data = rest.length > 0 ? rest.join(":").trim() : null;
+      yield [prefix, data];
+    }
+  }
+
+  fromUserStory(control, value) {
+    if (control.constructor === CheckboxListControl) {
+      return value.split(",").map(item => item.trim());
+    }
+    return value;
+  }
+
+  toUserStory(control) {
+    if (control.constructor === CheckboxListControl) {
+      return control.state.join(",");
+    }
+    if (control.state !== control.defaultState)  {
+      return control.state;
+    }
+    return null;
+  }
+
+  setControls(controlsData) {
+    const controlsByName = new Map(controlsData.map(controlData => [controlData.control.name, controlData]));
+
+    for (const [name, value] of this.data.entries()) {
+      if (controlsByName.has(name)) {
+        const {control, defaultFn} = controlsByName.get(name);
+        const stateValue = this.fromUserStory(control, value);
+        if (control.isValidState(stateValue)) {
+          control.state = stateValue;
+        } else if (defaultFn || control.defaultState) {
+          control.state = defaultFn ? defaultFn(control) : control.defaultState;
+        }
+      }
+    }
+  }
+
+  getFromControls(controls, unsetControls) {
+    const rv = [];
+    const controlsByName = new Map(controls.map(control => [control.name, control]));
+    const unsetNames = new Set(unsetControls ? unsetControls.map(control => control.name) : []);
+
+    console.log(unsetControls, unsetNames);
+
+    for (let [prefix, value] of this.data) {
+      if (controlsByName.has(prefix)) {
+        value = this.toUserStory(controlsByName.get(prefix));
+        controlsByName.delete(prefix);
+      }
+      if (value !== null && !unsetNames.has(prefix)) {
+        rv.push(`${prefix}:${value}`);
+      }
+    }
+    for (let [name, control] of controlsByName.entries()) {
+      const value = this.toUserStory(control);
+      if (value !== null) {
+        rv.push(`${name}:${value}`);
+      }
+    }
+    return rv.join("\n");
+  }
+}
+
+class Keywords {
+  constructor(keywords) {
+    this.data = new Set(keywords);
+  }
+
+  getPrefixKeywords(prefix) {
+    return new Set(Array.from(this.data)
+                   .filter(keyword => keyword.startsWith(prefix)));
+  }
+
+  setControls(controlsData) {
+    for (const {control, defaultFn} of controlsData) {
+      const keywords = control.datasetValues("keyword").intersection(this.data);
+      let found = false;
+      for (const elem of control.elem.options) {
+        if (keywords.has(elem.dataset.keyword)) {
+          elem.selected = true;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        control.state = defaultFn ? defaultFn(control) : control.defaultState;
+      }
+    }
+  }
+
+  getFromControls(controls, requiredKeywords) {
+    const newKeywords = [];
+    const settableKeywords = new Set(requiredKeywords);
+    const wantKeywords = new Set(requiredKeywords);
+
+    for (const control of controls) {
+      for (const value of control.datasetValues("keyword")) {
+        if (value != null) {
+          settableKeywords.add(value);
+        }
+      }
+      const value = control.datasetValue("keyword");
+      if (value) {
+        wantKeywords.add(value);
+      }
+    }
+
+    for (const keyword of this.data) {
+      if (settableKeywords.has(keyword)) {
+        if (wantKeywords.has(keyword)) {
+          newKeywords.push(keyword);
+          wantKeywords.delete(keyword);
+        }
+        // Otherwise the keyword should be removed
+      } else {
+        newKeywords.push(keyword);
+      }
+    }
+
+    for (const keyword of wantKeywords) {
+      if (keyword) {
+        newKeywords.push(keyword);
+      }
+    }
+
+    return newKeywords.join(", ");
+  }
 }
 
 function todayString() {
@@ -11,39 +151,32 @@ function todayString() {
 
 }
 
-function getOptionsData() {
-  return {
-    platforms: getCategoryValues("platform", "input"),
-    configuration: getCategoryValues("configuration", "option"),
-    impact: getCategoryValues("impact", "option"),
-    affects: getCategoryValues("affects", "option"),
-    branch: getCategoryValues("branch", "option"),
-    diagnosisTeam: getCategoryValues("diagnosisTeam", "option"),
-  };
-}
+function getImpactScore(controls) {
+  if (controls.impact.value !== "performance") {
+    return parseInt(controls.impact.value);
+  }
 
-function getCategoryValues(prefix, elemType) {
-  return Array.from(document.querySelectorAll(`#${prefix} ${elemType}`)).map(elem => {
-    const [gotPrefix, ...rest] = elem.id.split("-");
-    if (gotPrefix != prefix) {
-      console.warn("Unexpected element", elem);
-      return null;
-    }
-    return rest.join("-");
-  }).filter(x => x);
-}
+  let score = 0;
+  for (const control of [controls.performanceImpactBrowser,
+                         controls.performanceImpactContent,
+                         controls.performanceImpactPageLoad,
+                         controls.performanceImpactResources,
+                         controls.performanceImpactAnimation]) {
+    score += parseInt(control.value);
+  }
+  return score;
+};
 
 function getSeverity(controls, rankData) {
   const rank = rankData ? rankData.rank : null;
 
-  const impactScore = parseInt(controls.impact.value);
+  const impactScore = getImpactScore(controls);
 
   const configurationModifier = parseFloat(controls.configuration.value);
 
   const affectsModifier = parseFloat(controls.affects.value);
 
-  const platformModifier = Array.from(Object.values(controls.platforms))
-        .reduce((prev, current) => parseFloat(current.value) + prev, 0);
+  const platformModifier = controls.platforms.value.map(x => parseFloat(x)).reduce((x, y) => x + y);
 
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
   let severity = "S4";
@@ -109,92 +242,6 @@ function computeScore(severity, priority) {
   return severity.severityScore * priority.priorityScore;
 }
 
-function* parseUserStory(userStory) {
-  const lines = userStory.split(/\r?\n|\r|\n/g);
-  for (const line of lines) {
-    const [prefix, ...rest] = line.split(":");
-    const data = rest.length > 0 ? rest.join(":").trim() : null;
-    yield [prefix, data];
-  }
-}
-
-function extractUserStoryData(optionsData, userStory) {
-  const rv = {};
-  for (const [prefix, data] of parseUserStory(userStory)) {
-    if (data === null) {
-      continue;
-    }
-    if (prefix === "platform") {
-      const foundPlatforms = [];
-      const [...dataPlatforms] = data.split(",");
-      for (let platform of dataPlatforms) {
-        platform = platform.trim();
-        if (optionsData.platforms.includes(platform)) {
-          foundPlatforms.push(platform);
-        }
-      }
-      if (foundPlatforms.length) {
-        rv.platforms = foundPlatforms;
-      }
-    } else if (prefix === "impact") {
-      if (optionsData.impact.includes(data)) {
-        rv.impact = data;
-      }
-    } else if (prefix === "configuration") {
-      if (optionsData.configuration.includes(data)) {
-        rv.configuration = data;
-      }
-    } else if (prefix === "affects") {
-        if (optionsData.affects.includes(data)) {
-          rv.affects = data;
-        }
-    } else if (prefix === "branch") {
-        if (optionsData.branch.includes(data)) {
-          rv.branch = data;
-        }
-    } else if (prefix === "diagnosis-team") {
-        if (optionsData.diagnosisTeam.includes(data)) {
-          rv.diagnosisTeam = data;
-        }
-    } else if (prefix === "outreach-assignee") {
-      rv.outreachAssignee = data;
-    } else if (prefix === "outreach-contact-date") {
-      if (isDateValue(data)) {
-        rv.outreachContactDate = data;
-      }
-    } else if (prefix === "outreach-response-date") {
-      if (isDateValue(data)) {
-        rv.outreachResponseDate = data;
-      }
-    } else if (prefix === "outreach-reference") {
-      rv.outreachReference = data;
-    }
-  }
-  return rv;
-}
-
-function getUserStory(userStory, data) {
-  const rv = [];
-  for (let [prefix, value] of parseUserStory(userStory)) {
-    if (!prefix) {
-        continue;
-    }
-    if (prefix in data) {
-      value = data[prefix];
-      delete data[prefix];
-    }
-    if (value !== null) {
-      rv.push(`${prefix}:${value}`);
-    }
-  }
-  for (let [prefix, value] of Object.entries(data)) {
-    if (value !== null) {
-      rv.push(`${prefix}:${value}`);
-    }
-  }
-  return rv.join("\n");
-}
-
 function getEtpType(dependsOn) {
   const entries = dependsOn.split(",").map(item => item.trim());
   if (entries.includes("1101005")) {
@@ -206,50 +253,11 @@ function getEtpType(dependsOn) {
   return "none";
 }
 
-function getKeywords(keywords, controlsList) {
-  const requiredKeywords = ["webcompat:site-report"];
-  const settableKeywords = new Set(requiredKeywords);
-  const wantKeywords = new Set(requiredKeywords);
-  const newKeywords = [];
-
-  wantKeywords.add();
-
-  for (const control of controlsList) {
-    for (const value of control.values()) {
-      settableKeywords.add(value);
-    }
-    const value = control.value;
-    if (value) {
-      wantKeywords.add(value);
-    }
-  }
-
-  for (const keyword of keywords) {
-    if (settableKeywords.has(keyword)) {
-      if (wantKeywords.has(keyword)) {
-        newKeywords.push(keyword);
-        wantKeywords.delete(keyword);
-      }
-      // Otherwise the keyword should be removed
-    } else {
-      newKeywords.push(keyword);
-    }
-  }
-
-  for (const keyword of wantKeywords) {
-    if (keyword) {
-      newKeywords.push(keyword);
-    }
-  }
-
-  return newKeywords.join(", ");
-}
-
 function getDependsOn(dependsOn, controls) {
   let addBug = null;
-  if (controls.impact.state === "impact-blocked") {
+  if (controls.impact.state === "blocked") {
     addBug = "1886128";
-  } else if (controls.impact.state === "impact-unsupported-warning") {
+  } else if (controls.impact.state === "unsupported-warning") {
     addBug = "1886129";
   }
 
@@ -270,22 +278,6 @@ async function getRank(url) {
     url,
   });
   return urlRank;
-}
-
-function getWebcompatKeywords(keywords) {
-  const keywordPrefix = "webcompat:";
-  return new Set(keywords
-                 .filter(keyword => keyword.startsWith(keywordPrefix))
-                 .map(keyword => keyword.slice(keywordPrefix.length)));
-}
-
-function selectStateFromKeywords(prefix, keywords, bugKeywords, defaultFn) {
-  for (let keyword of keywords) {
-    if (bugKeywords.has(keyword)) {
-      return `${prefix}-${keyword}`;
-    }
-  }
-  return defaultFn();
 }
 
 function parseUserName(user) {
@@ -319,12 +311,7 @@ class TriageSection extends Section {
 
     Object.assign(controls, {
       url: new Control(state, "url"),
-      platforms: {
-        windows: new CheckboxControl(state, "platform-windows"),
-        mac: new CheckboxControl(state, "platform-mac"),
-        linux: new CheckboxControl(state, "platform-linux"),
-        android: new CheckboxControl(state, "platform-android"),
-      },
+      platforms: new CheckboxListControl(state, "platforms"),
       login: new SelectControl(state, "login"),
       impact: new SelectControl(state, "impact"),
       configuration: new SelectControl(state, "configuration"),
@@ -332,12 +319,23 @@ class TriageSection extends Section {
       branch: new SelectControl(state, "branch"),
       status: new SelectControl(state, "status"),
       outreach: new SelectControl(state, "outreach"),
-      diagnosisTeam: new SelectControl(state, "diagnosisTeam"),
+      diagnosisTeam: new SelectControl(state, "diagnosis-team"),
       regression: new CheckboxControl(state, "regression", { defaultValue: "" }),
       sitepatch: new SelectControl(state, "sitepatch"),
       initialSeverity: new Control(state, "severity-initial"),
       initialPriority: new Control(state, "priority-initial"),
+      performanceImpactBrowser: new SelectControl(state, "performance-impact-browser"),
+      performanceImpactContent: new SelectControl(state, "performance-impact-content"),
+      performanceImpactPageLoad: new SelectControl(state, "performance-impact-page-load"),
+      performanceImpactResources: new SelectControl(state, "performance-impact-resources"),
+      performanceImpactAnimation: new SelectControl(state, "performance-impact-animation"),
     });
+
+    this.performanceControls = [controls.performanceImpactBrowser,
+                                controls.performanceImpactContent,
+                                controls.performanceImpactPageLoad,
+                                controls.performanceImpactResources,
+                                controls.performanceImpactAnimation];
 
     const initialRank = await getRank(controls.url.value);
     const rank = state.signal(initialRank);
@@ -351,15 +349,25 @@ class TriageSection extends Section {
 
     state.effect(() => {
       // Weird mix of .value and .state is so this only depends on controls.status
-      if (controls.status.value === "" && controls.outreach.state === "outreach-none") {
-        controls.outreach.state = "outreach-needs-contact";
+      if (controls.status.value === "" && controls.outreach.state === controls.outreach.defaultState) {
+        controls.outreach.state = "needs-contact";
       }
     });
 
     state.effect(() => {
-      if (controls.diagnosisTeam.state === "diagnosisTeam-none" &&
-        controls.status.value === "webcompat:needs-diagnosis") {
-        controls.diagnosisTeam.state = "diagnosisTeam-webcompat";
+      if (controls.diagnosisTeam.state === controls.diagnosisTeam.defaultState &&
+        controls.status.value === "needs-diagnosis") {
+        controls.diagnosisTeam.state = "webcompat";
+      }
+    });
+
+    state.effect(() => {
+      const performanceSubsection = document.getElementById("performance");
+      if (controls.impact.value === "performance") {
+        performanceSubsection.hidden = false;
+        controls.diagnosisTeam.state = "performance";
+      } else {
+        performanceSubsection.hidden = true;
       }
     });
 
@@ -378,16 +386,34 @@ class TriageSection extends Section {
 
     const updateButton = new Button(state, "update-bug", async () => {
       updateButton.disabled = true;
+      const userStory = new UserStory(bugData.cf_user_story);
+      const keywords = new Keywords(bugData.keywords);
+      const keywordControls = [controls.login,
+                               controls.status,
+                               controls.sitepatch,
+                               controls.outreach,
+                               controls.regression];
+      const userStoryControls = [controls.platforms,
+                                 controls.impact,
+                                 controls.configuration,
+                                 controls.affects,
+                                 controls.branch,
+                                 controls.diagnosisTeam];
+      const unsetUserStoryControls = [];
+      if (controls.impact.value === "performance") {
+        keywordControls.push(...[controls.performanceImpactBrowser,
+                                 controls.performanceImpactContent,
+                                 controls.performanceImpactAnimation]);
+        userStoryControls.push(...this.performanceControls);
+      } else {
+        unsetUserStoryControls.push(...this.performanceControls);
+      }
       const data = {
         priority: controls.priority.value,
         severity: controls.severity.value,
         url: controls.url.value,
-        keywords: getKeywords(bugData.keywords, [controls.login,
-                                                 controls.status,
-                                                 controls.sitepatch,
-                                                 controls.outreach,
-                                                 controls.regression]),
-        userStory: this.getUserStory(bugData.cf_user_story),
+        keywords: keywords.getFromControls(keywordControls, ["webcompat:site-report"]),
+        userStory: userStory.getFromControls(userStoryControls, unsetUserStoryControls),
         dependsOn: getDependsOn(bugData.dependson, controls),
       };
       try {
@@ -403,94 +429,59 @@ class TriageSection extends Section {
 
   async populate({bugData}) {
     const controls = this.controls;
-    const optionsData = getOptionsData();
-    const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
+    const userStory = new UserStory(bugData.cf_user_story);
+    const keywords = new Keywords(bugData.keywords);
     const etpType = getEtpType(bugData.dependson);
 
     controls.url.state = bugData.url;
-
     controls.initialPriority.state = bugData.priority;
     controls.initialSeverity.state = bugData.severity;
 
-    if (userStoryData.platforms) {
-      for (const [platform, control] of Object.entries(controls.platforms)) {
-        control.state = userStoryData.platforms.includes(platform);
-      };
-    }
-    if (userStoryData.impact) {
-      controls.impact.state = `impact-${userStoryData.impact}`;
-    } else {
-      controls.impact.state = `impact-impact-site-broken`;
-    }
-    if (userStoryData.configuration) {
-      controls.configuration.state = `configuration-${userStoryData.configuration}`;
-    } else if (etpType === "strict") {
-      controls.configuration.state = `configuration-common`;
-    } else {
-      controls.configuration.state = `configuration-general`;
-    }
-    if (userStoryData.affects) {
-      controls.affects.state = `affects-${userStoryData.affects}`;
-    } else {
-      controls.affects.state = `affects-all`;
-    }
-    if (userStoryData.branch) {
-      controls.branch.state = `branch-${userStoryData.branch}`;
-    } else {
-      controls.branch.state = `branch-release`;
-    }
-    if (userStoryData.diagnosisTeam) {
-      controls.diagnosisTeam.state = `diagnosisTeam-${userStoryData.diagnosisTeam}`;
-    } else if (etpType != "none") {
-      controls.diagnosisTeam.state = "diagnosisTeam-privacy";
-    } else {
-      controls.diagnosisTeam.state = "diagnosisTeam-none";
+    const perfKeywords = keywords.getPrefixKeywords("perf:");
+    const isPerfBug = (bugData.product === "Core" && bugData.component == "Performance") || perfKeywords.length > 0;
+
+    userStory.setControls([{control: controls.impact,
+                            defaultFn: control => isPerfBug ? "performance" : control.defaultState},
+                           {control: controls.platforms},
+                           {control: controls.configuration,
+                            defaultFn: control => {
+                              if (etpType === "strict") {
+                                return "common";
+                              } else {
+                                return control.defaultState;
+                              }
+                            }
+                           },
+                           {control: controls.affects},
+                           {control: controls.branch},
+                           {control: controls.diagnosisTeam},
+                           {control: controls.performanceImpactBrowser},
+                           {control: controls.performanceImpactContent},
+                           {control: controls.performanceImpactPageLoad},
+                           {control: controls.performanceImpactResources},
+                           {control: controls.performanceImpactAnimation}]);
+
+
+
+    if (!userStory.data.has("configuration")) {
+
     }
 
-    const webcompatKeywords = getWebcompatKeywords(bugData.keywords);
-    controls.login.state = selectStateFromKeywords("login", ["needs-login", "have-login"],
-      webcompatKeywords, () => "login-none");
-
-    controls.outreach.state = selectStateFromKeywords("outreach",
-      ["needs-contact", "contact-ready",
-        "contact-in-progress", "contact-complete",
-        "sitewait"],
-      webcompatKeywords, () => "outreach-none");
-
-    controls.status.state = selectStateFromKeywords("status", ["needs-diagnosis", "platform-bug"], webcompatKeywords,
-      () => {
-        if (etpType != "none") {
-          return "status-platform-bug";
-        }
-        if (controls.outreach.state != "outreach-none") {
-          return "status-sitebug";
-        }
-        return "status-needs-diagnosis";
-      });
-
-    controls.sitepatch.state = selectStateFromKeywords("sitepatch", ["needs-sitepatch", "sitepatch-applied"],
-      webcompatKeywords, () => "sitepatch-none");
+    keywords.setControls([{control: controls.login},
+                          {control: controls.outreach},
+                          {control: controls.status,
+                           defaultFn: () => {
+                             if (etpType != "none") {
+                               return "platform-bug";
+                             }
+                             if (controls.outreach.state != "outreach-none") {
+                               return "sitebug";
+                             }
+                             return "needs-diagnosis";
+                           }},
+                          {control: controls.sitepatch}]);
 
     controls.regression.state = bugData.keywords.includes("regression");
-  }
-
-  getUserStory(userStory) {
-    const controls = this.controls;
-    const data = {
-      platform: Array.from(Object.entries(controls.platforms))
-        .filter(([_, control]) => control.state)
-        .map(([name, _]) => name).join(","),
-      impact: controls.impact.state.split("-").slice(1).join("-"),
-      configuration: controls.configuration.state.split("-").slice(1).join("-"),
-      affects: controls.affects.state.split("-").slice(1).join("-"),
-      branch: controls.branch.state.split("-").slice(1).join("-")
-    };
-    if (controls.diagnosisTeam.value) {
-      data["diagnosis-team"] = controls.diagnosisTeam.value;
-    } else {
-      data["diagnosis-team"] = null;
-    }
-    return getUserStory(userStory, data);
   }
 }
 
@@ -499,11 +490,11 @@ class OutreachSection extends Section {
     const controls = this.controls;
 
     Object.assign(controls, {
-      status: new SelectControl(state, "outreachStatus"),
+      status: new SelectControl(state, "outreach-status"),
       assignee: new Control(state, "outreach-assignee"),
-      lastContacted: new Control(state, "outreach-last-contacted"),
+      lastContacted: new DateControl(state, "outreach-last-contacted"),
       haveResponse: new CheckboxControl(state, "outreach-have-response"),
-      lastResponse: new Control(state, "outreach-last-response"),
+      lastResponse: new DateControl(state, "outreach-last-response"),
       reference: new Control(state, "outreach-reference"),
     });
 
@@ -522,7 +513,7 @@ class OutreachSection extends Section {
     state.effect(() => {
       if (controls.lastContacted.value) {
         if (["outreachStatus-none", "outreachStatus-needs-contact", "outreachStatus-contact-ready"].includes(controls.status.state)) {
-          controls.status.state = "outreachStatus-contact-in-progress";
+          controls.status.state = "contact-in-progress";
         }
       }
     });
@@ -536,7 +527,7 @@ class OutreachSection extends Section {
           controls.lastResponse.value = todayString();
         }
         if (["outreachStatus-none", "outreachStatus-needs-contact", "outreachStatus-have-contact"].includes(controls.status.state)) {
-          controls.status.state = "outreachStatus-contact-in-progress";
+          controls.status.state = "contact-in-progress";
         }
       } else {
         controls.lastResponse.hide();
@@ -546,9 +537,14 @@ class OutreachSection extends Section {
 
     const updateButton = new Button(state, "outreach-update-bug", async () => {
       updateButton.disabled = true;
+      const userStory = new UserStory(bugData.cf_user_story);
+      const keywords = new Keywords(bugData.keywords);
       const data = {
-        keywords: getKeywords(bugData.keywords, [controls.status]),
-        userStory: this.getUserStory(bugData.cf_user_story),
+        keywords: keywords.getFromControls([controls.status], ["webcompat:site-report"]),
+        userStory: userStory.getFromControls([controls.assignee,
+                                              controls.lastContacted,
+                                              controls.lastResponse,
+                                              controls.reference]),
       };
       try {
         await browser.tabs.sendMessage(tab.id, { type: "set-bug-data", ...data });
@@ -564,64 +560,17 @@ class OutreachSection extends Section {
 
   async populate({bugData}) {
     const controls = this.controls;
-    const optionsData = getOptionsData();
-    const userStoryData = extractUserStoryData(optionsData, bugData.cf_user_story);
+    const userStory = new UserStory(bugData.cf_user_story);
+    const keywords = new Keywords(bugData.keywords);
 
-    if (userStoryData.outreachAssignee) {
-      controls.assignee.value = userStoryData.outreachAssignee;
-    } else {
-      controls.assignee.value = "";
-    }
-    if (userStoryData.outreachContactDate) {
-      controls.lastContacted.value = userStoryData.outreachContactDate;
-    } else {
-      controls.lastContacted.value = "";
-    }
-    if (userStoryData.outreachResponseDate) {
-      controls.haveResponse.state = true;
-      controls.lastResponse.value = userStoryData.outreachResponseDate;
-    } else {
-      controls.haveResponse.state = false;
-      controls.lastResponse.value = "";
-    }
-    if (userStoryData.outreachReference) {
-      controls.reference.value = userStoryData.outreachReference;
-    } else {
-      controls.reference.value = "";
-    }
+    userStory.setControls([{control: controls.assignee},
+                           {control: controls.lastContacted},
+                           {control: controls.lastResponse},
+                           {control: controls.reference}]);
 
-    controls.status.state = selectStateFromKeywords("outreachStatus",
-                                                    ["needs-contact", "contact-ready",
-                                                     "contact-in-progress", "contact-complete",
-                                                     "sitewait"],
-                                                    getWebcompatKeywords(bugData.keywords),
-                                                    () => "outreachStatus-none");
-  }
+    controls.haveResponse.state = userStory.data.has("outreach-last-response");
 
-  getUserStory(userStory) {
-    const controls = this.controls;
-    const data = {};
-    if (controls.assignee.value.trim()) {
-      data["outreach-assignee"] = controls.assignee.value.trim();
-    } else {
-      data["outreach-assignee"] = null;
-    }
-    if (controls.lastContacted.value) {
-      data["outreach-contact-date"] = controls.lastContacted.value;
-    } else {
-      data["outreach-contact-date"] = null;
-    }
-    if (controls.haveResponse.state && controls.lastResponse.value) {
-      data["outreach-response-date"] = controls.lastResponse.value;
-    } else {
-      data["outreach-response-date"] = null;
-    }
-    if (controls.reference.value.trim()) {
-      data["outreach-reference"] = controls.reference.value.trim();
-    } else {
-      data["outreach-reference"] = null;
-    }
-    return getUserStory(userStory, data);
+    keywords.setControls([{control: controls.status}]);
   }
 }
 

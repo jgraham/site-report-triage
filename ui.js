@@ -238,6 +238,39 @@ export class Control extends UiElement {
   serialize() {
     return this.state;
   }
+
+  datasetValue(key) {
+    if (this.elem.dataset[key]) {
+      return this.elem.dataset[key];
+    }
+    return null;
+  }
+
+  datasetValues(key) {
+    const values = new Set();
+    if (this.elem.dataset[key]) {
+      values.add(this.elem.dataset[key]);
+    }
+    return values;
+  }
+
+  get name() {
+    if(this.elem.name) {
+      return this.elem.name;
+    }
+    return this.elem.id;
+  }
+
+  get defaultState() {
+    if (this.elem.dataset.defaultState) {
+      return this.elem.dataset.defaultState;
+    }
+    return "";
+  }
+
+  isValidState(value) {
+    return typeof(value) === "string";
+  }
 }
 
 export class CheckboxControl extends Control {
@@ -268,24 +301,26 @@ export class CheckboxControl extends Control {
     this.signal.value = this.getValueFromElement();
   }
 
-  values() {
-    return new Set([this.elem.value, ""]);
+  datasetValue(key) {
+    if (this.elem.checked && this.elem.dataset[key]) {
+      return this.elem.dataset[key];
+    }
+    return null;
+  }
+
+  isValidState(value) {
+    return value === true || value === false;
   }
 }
 
 export class SelectControl extends Control {
   get state() {
-    let selectedIndex = this.elem.selectedIndex;
-    if (selectedIndex === -1) {
-      return null;
-    }
-    return this.elem[selectedIndex].id;
+    return this.selectedElement()?.dataset["state"];
   }
 
   set state(value) {
-    let selectedIndex = this.elem.selectedIndex;
     for (const option of this.elem.options) {
-      if (option.id === value) {
+      if (option.dataset["state"] === value) {
         option.selected = true;
         break;
       }
@@ -293,12 +328,90 @@ export class SelectControl extends Control {
     this.signal.value = this.elem.value;
   }
 
-  values() {
+  get defaultState() {
+    return this.elem.dataset.defaultState;
+  }
+
+  selectedElement() {
+    const selectedIndex = this.elem.selectedIndex;
+    if (selectedIndex === -1) {
+      return null;
+    }
+    return this.elem[selectedIndex];
+  }
+
+  datasetValue(key) {
+    const elem = this.selectedElement();
+    if (elem && elem.dataset[key]) {
+      return elem.dataset[key];
+    }
+    return null;
+  }
+
+  datasetValues(key) {
     const values = new Set();
     for (const option of this.elem.options) {
-      values.add(option.value);
+      if (option.dataset[key]) {
+        values.add(option.dataset[key]);
+      }
     }
     return values;
+  }
+
+  isValidState(value) {
+    return this.datasetValues("state").has(value);
+  }
+}
+
+export class DateControl extends Control {
+  isValidState(value) {
+    return /\d{4}-\d{2}-\d{2}/.test(value);
+  }
+}
+
+export class CheckboxListControl extends Control {
+  constructor(state, idOrElem, options = {}) {
+    super(state, idOrElem, options);
+    this.checkboxes = Array.from(this.elem.querySelectorAll("input[type=checkbox]")).map(elem => new CheckboxControl(state, elem));
+    state.effect(() => {
+      for (const checkbox of this.checkboxes) {
+        // Read this to ensure this is updated whenever the state
+        const _ = checkbox.signal.value;
+      }
+      this.signal.value = this.state;
+    });
+  }
+
+  get state() {
+    return this.checkboxes.filter(control => control.state).map(control => control.name);
+  }
+
+  set state(values) {
+    this.checkboxes.forEach(control => control.state = values.includes(control.elem.name));
+    this.signal.value = this.state;
+  }
+
+  get value() {
+    return this.checkboxes.filter(control => control.state).map(control => control.value);
+  }
+
+  datasetValues(key) {
+    const values = new Set();
+    for (const control of this.controls) {
+      if (control.datasetValue(key)) {
+        values.add(control.datasetValue(key));
+      }
+    }
+    return values;
+  }
+
+  get name() {
+    return this.elem.dataset["name"];
+  }
+
+  isValidState(value) {
+    const stateValues = new Set(this.checkboxes.map(elem => elem.name));
+    return value.every(x => stateValues.has(x));
   }
 }
 
