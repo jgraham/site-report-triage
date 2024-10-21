@@ -474,7 +474,7 @@ class TriageSection extends Section {
                              if (etpType != "none") {
                                return "platform-bug";
                              }
-                             if (controls.outreach.state != "outreach-none") {
+                             if (controls.outreach.state != "none") {
                                return "sitebug";
                              }
                              return "needs-diagnosis";
