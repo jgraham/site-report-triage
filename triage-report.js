@@ -58,8 +58,6 @@ class UserStory {
     const controlsByName = new Map(controls.map(control => [control.name, control]));
     const unsetNames = new Set(unsetControls ? unsetControls.map(control => control.name) : []);
 
-    console.log(unsetControls, unsetNames);
-
     for (let [prefix, value] of this.data) {
       if (controlsByName.has(prefix)) {
         value = this.toUserStory(controlsByName.get(prefix));
@@ -400,11 +398,17 @@ class TriageSection extends Section {
                                  controls.branch,
                                  controls.diagnosisTeam];
       const unsetUserStoryControls = [];
+
+      // Only set this if we want to change the product / component
+      let productComponent = null;
       if (controls.impact.value === "performance") {
         keywordControls.push(...[controls.performanceImpactBrowser,
                                  controls.performanceImpactContent,
                                  controls.performanceImpactAnimation]);
         userStoryControls.push(...this.performanceControls);
+        if (bugData.product === "Web Compatibility") {
+          productComponent = ["Core", "Performance"];
+        }
       } else {
         unsetUserStoryControls.push(...this.performanceControls);
       }
@@ -416,6 +420,9 @@ class TriageSection extends Section {
         userStory: userStory.getFromControls(userStoryControls, unsetUserStoryControls),
         dependsOn: getDependsOn(bugData.dependson, controls),
       };
+      if (productComponent !== null) {
+        [data.product, data.component] = productComponent;
+      }
       try {
         await browser.tabs.sendMessage(tab.id, { type: "set-bug-data", ...data });
         sections.serializeOnClose = false;
@@ -460,12 +467,6 @@ class TriageSection extends Section {
                            {control: controls.performanceImpactPageLoad},
                            {control: controls.performanceImpactResources},
                            {control: controls.performanceImpactAnimation}]);
-
-
-
-    if (!userStory.data.has("configuration")) {
-
-    }
 
     keywords.setControls([{control: controls.login},
                           {control: controls.outreach},

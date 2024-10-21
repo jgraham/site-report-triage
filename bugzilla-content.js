@@ -32,10 +32,14 @@ function readBugData(data) {
   };
 }
 
-function setElementValue(id, value) {
+function setElementValue(id, value, options={}) {
+  const {dispatchChange=false} = options;
   if (value !== undefined) {
     const elem = document.getElementById(id);
     elem.value = value;
+    if (dispatchChange) {
+      elem.dispatchEvent(new Event("change"));
+    }
   }
 }
 
@@ -54,6 +58,17 @@ async function setBugData(data) {
     await checkElementState(select, selectLoaded, {childList: true, subtree: true}, {timeout: 5000});
   }
 
+  if (data.product) {
+    const component = document.getElementById("component");
+    const options = component.options;
+    setElementValue("product", data.product, {dispatchChange: true});
+
+    await checkElementState(component,
+                            elem => Array.from(elem.options).map(item => item.value).includes(data.component),
+                            {childList: true},
+                            {timeout: 5000});
+    setElementValue("component", data.component, {dispatchChange: true});
+  }
   setElementValue("priority", data.priority);
   setElementValue("bug_severity", data.severity);
   setElementValue("bug_file_loc", data.url);
@@ -68,12 +83,10 @@ async function checkElementState(elem, cond, observerOptions, options) {
   }
   let changed = new Promise(resolve => {
     const observer = new MutationObserver(records => {
-      for (const record of records) {
-        if (cond(elem)) {
-          observer.disconnect();
-          resolve();
-          return;
-        }
+      if (cond(elem)) {
+        observer.disconnect();
+        resolve();
+        return;
       }
     });
     observer.observe(elem, observerOptions);
