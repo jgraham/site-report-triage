@@ -218,13 +218,13 @@ ${controls.actualBehavior.value.trim()}`;
     const keywords = ["webcompat:site-report"];
 
     let closeMessage;
-    if (etpState === "etp-strict") {
+    if (etpState === "strict") {
       dependsOn.push("1101005");
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
 
 Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
       keywords.push("webcompat:platform-bug");
-    } else if (etpState === "etp-strict-standard") {
+    } else if (etpState === "strict-standard") {
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
