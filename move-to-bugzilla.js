@@ -117,130 +117,6 @@ function getOS(osString) {
   return "Unspecified";
 }
 
-function getBugData(issueData, controls) {
-  let preconditionsText = "";
-  if (controls.preconditions.value.trim()) {
-    preconditionsText = `**Preconditions:**
-${controls.preconditions.value.trim()}`;
-  }
-
-  let strText = "";
-  if (controls.str.value.trim()) {
-    strText = `**Steps to reproduce:**
-${controls.str.value.trim()}`;
-  }
-
-  let expectedText = "";
-  if (controls.expectedBehavior.value.trim()) {
-    expectedText = `**Expected Behavior:**
-${controls.expectedBehavior.value.trim()}`;
-  }
-
-  let actualText = "";
-  if (controls.actualBehavior.value.trim()) {
-    actualText = `**Actual Behavior:**
-${controls.actualBehavior.value.trim()}`;
-  }
-  const sectionsText = [preconditionsText,
-                        strText,
-                        expectedText,
-                        actualText].filter(x => x.length).join("\n\n");
-
-  const os = getOS(controls.operatingSystem.value);
-  const platform = os === "Android" ? "ARM" : (os === "Unspecified" ? "Unspecified" : "Desktop");
-
-  let notes = [];
-  if (controls.etp.state !== "other") {
-    notes.push(controls.etp.value);
-  }
-  const reproducesIn = [];
-  const doesNotReproduceIn = [];
-  for (const control of controls.reproduces.checkboxes) {
-    const target = control.state ? reproducesIn : doesNotReproduceIn;
-    target.push(control.name);
-  }
-  if (reproducesIn.length) {
-    notes.push(`Reproduces in ${joinListStr(reproducesIn)}`);
-  }
-  if (doesNotReproduceIn.length) {
-    notes.push(`Does not reproduce in ${joinListStr(doesNotReproduceIn)}`);
-  }
-  let extraNotesText = "";
-  if (controls.extraNotes.value.trim().length) {
-    extraNotesText = `\n${controls.extraNotes.value}`;
-  }
-  const notesText = notes.map(item => `- ${item}`).join("\n") + extraNotesText;
-
-  const etpState = controls.etp.state;
-  const bugType = ["etp-strict", "etp-strict-standard"].includes(etpState) ? "ETP" : "webcompat";
-  const blocks = [];
-  const dependsOn = [];
-  const keywords = ["webcompat:site-report"];
-
-  let closeMessage;
-  if (etpState === "etp-strict") {
-    dependsOn.push("1101005");
-    closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
-
-Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
-    keywords.push("webcompat:platform-bug");
-  } else if (etpState === "etp-strict-standard") {
-    closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
-
-Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
-    dependsOn.push("1480137");
-    keywords.push("webcompat:platform-bug");
-  } else {
-    let reproducesMessage = "";
-    if (reproducesIn.length) {
-      reproducesMessage += (`I was able to reproduce in ${joinListStr(reproducesIn)}`);
-    }
-    if (doesNotReproduceIn.length && reproducesMessage.length) {
-      notes.push(`, but not in ${joinListStr(doesNotReproduceIn)}`);
-    }
-    reproducesMessage += ".";
-    closeMessage = `Thanks for the report. ${reproducesMessage}`;
-  }
-  closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
-
-  const description = `**Environment:**
-Operating system: ${controls.operatingSystem.value}
-Firefox version: ${controls.firefoxVersion.value}
-
-${sectionsText}
-
-**Notes:**
-${notesText}
-
-Created from ${issueData.html_url}
-`;
-
-  if (reproducesIn.includes("firefox-nightly") && !reproducesIn.includes("firefox-release")) {
-    keywords.push("regression");
-  }
-  if (issueData.milestone.title === "needsdiagnosis") {
-    keywords.push("webcompat:needs-diagnosis");
-  }
-  if (issueData.labels.find(label => label.name == ("action-needssitepatch"))) {
-    keywords.push("webcompat:needs-sitepatch");
-  }
-
-  return {
-    summary: controls.summary.value,
-    url: controls.url.value,
-    bugType,
-    priority: getDiagnosisPriority(issueData, keywords.includes("regression")),
-    platform,
-    os,
-    keywords,
-    description,
-    seeAlso: [issueData.html_url],
-    blocks,
-    closeMessage,
-    dependsOn,
-  };
-}
-
 class IssueForm extends Section {
   async create(state, {sections, issue, issueData}) {
     const controls = this.controls;
@@ -259,7 +135,7 @@ class IssueForm extends Section {
       reset: new Button(state, "issue-form-reset", () => this.populate({issue})),
       next: new Button(state, "issue-form-next", () => {
         const bugFormSection = sections.get("bug-form");
-        const bugData = getBugData(issueData, controls);
+        const bugData = this.getBugData(issueData);
         bugFormSection.populate({bugData});
         sections.show("bug-form");
       })
@@ -278,6 +154,131 @@ class IssueForm extends Section {
     controls.firefoxVersion.state = issueData.parsedBody.browser_version;
     controls.actualBehavior.state = issueData.parsedBody.description.trim();
     controls.str.state = issueData.parsedBody.steps_to_reproduce.trim();
+  }
+
+  getBugData(issueData) {
+    const controls = this.controls;
+    let preconditionsText = "";
+    if (controls.preconditions.value.trim()) {
+      preconditionsText = `**Preconditions:**
+${controls.preconditions.value.trim()}`;
+    }
+
+    let strText = "";
+    if (controls.str.value.trim()) {
+      strText = `**Steps to reproduce:**
+${controls.str.value.trim()}`;
+    }
+
+    let expectedText = "";
+    if (controls.expectedBehavior.value.trim()) {
+      expectedText = `**Expected Behavior:**
+${controls.expectedBehavior.value.trim()}`;
+    }
+
+    let actualText = "";
+    if (controls.actualBehavior.value.trim()) {
+      actualText = `**Actual Behavior:**
+${controls.actualBehavior.value.trim()}`;
+    }
+    const sectionsText = [preconditionsText,
+                          strText,
+                          expectedText,
+                          actualText].filter(x => x.length).join("\n\n");
+
+    const os = getOS(controls.operatingSystem.value);
+    const platform = os === "Android" ? "Arm" : (os === "Unspecified" ? "Unspecified" : "Desktop");
+
+    let notes = [];
+    if (controls.etp.state !== "other") {
+      notes.push(controls.etp.value);
+    }
+    const reproducesIn = [];
+    const doesNotReproduceIn = [];
+    for (const control of controls.reproduces.checkboxes) {
+      const target = control.state ? reproducesIn : doesNotReproduceIn;
+      target.push(control.name);
+    }
+    if (reproducesIn.length) {
+      notes.push(`Reproduces in ${joinListStr(reproducesIn)}`);
+    }
+    if (doesNotReproduceIn.length) {
+      notes.push(`Does not reproduce in ${joinListStr(doesNotReproduceIn)}`);
+    }
+    let extraNotesText = "";
+    if (controls.extraNotes.value.trim().length) {
+      extraNotesText = `\n${controls.extraNotes.value}`;
+    }
+    const notesText = notes.map(item => `- ${item}`).join("\n") + extraNotesText;
+
+    const etpState = controls.etp.state;
+    const bugType = ["strict", "strict-standard"].includes(etpState) ? "ETP" : "webcompat";
+    const blocks = [];
+    const dependsOn = [];
+    const keywords = ["webcompat:site-report"];
+
+    let closeMessage;
+    if (etpState === "etp-strict") {
+      dependsOn.push("1101005");
+      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
+
+Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
+      keywords.push("webcompat:platform-bug");
+    } else if (etpState === "etp-strict-standard") {
+      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
+
+Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
+      dependsOn.push("1480137");
+      keywords.push("webcompat:platform-bug");
+    } else {
+      let reproducesMessage = "";
+      if (reproducesIn.length) {
+        reproducesMessage += (`I was able to reproduce in ${joinListStr(reproducesIn)}`);
+      }
+      if (doesNotReproduceIn.length && reproducesMessage.length) {
+        notes.push(`, but not in ${joinListStr(doesNotReproduceIn)}`);
+      }
+      reproducesMessage += ".";
+      closeMessage = `Thanks for the report. ${reproducesMessage}`;
+    }
+    closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
+
+    const description = `**Environment:**
+Operating system: ${controls.operatingSystem.value}
+Firefox version: ${controls.firefoxVersion.value}
+
+${sectionsText}
+
+**Notes:**
+${notesText}
+
+Created from ${issueData.html_url}
+`;
+
+    if (reproducesIn.includes("firefox-nightly") && !reproducesIn.includes("firefox-release")) {
+      keywords.push("regression");
+    }
+    if (issueData.milestone.title === "needsdiagnosis") {
+      keywords.push("webcompat:needs-diagnosis");
+    }
+    if (issueData.labels.find(label => label.name == ("action-needssitepatch"))) {
+      keywords.push("webcompat:needs-sitepatch");
+    }
+
+    return {
+      summary: controls.summary.value,
+      url: controls.url.value,
+      bugType,
+      priority: getDiagnosisPriority(issueData, keywords.includes("regression")),
+      platform,
+      os,
+      keywords,
+      description,
+      seeAlso: [issueData.html_url],
+      blocks,
+      closeMessage,
+      dependsOn,
+    };
   }
 }
 
