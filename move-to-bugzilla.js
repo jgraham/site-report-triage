@@ -73,19 +73,15 @@ function getDiagnosisPriority(issueData, isRegression) {
   switch(label.name.slice(-2)) {
   case "p1": {
     return "P1";
-    break;
   }
   case "p2": {
     return "P2";
-    break;
   }
   case "p3": {
     return "P3";
-    break;
   }
   default: {
     return "--";
-    break;
   }
   }
 }
