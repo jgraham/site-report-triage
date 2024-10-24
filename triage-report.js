@@ -274,6 +274,7 @@ async function getRank(url) {
   const urlRank = await browser.runtime.sendMessage({
     type: "get-tranco-rank",
     url,
+    includeSubdomains: false,
   });
   return urlRank;
 }

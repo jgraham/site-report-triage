@@ -221,6 +221,7 @@ Closing as moved.`;
 
 async function trancoRank(data) {
   let {url} = data;
+  const {includeSubdomains=true} = data;
 
   if (!url) {
     return null;
@@ -247,6 +248,9 @@ async function trancoRank(data) {
     } else if (resp.status !== 404) {
       console.error(`Failed to load ${domainRankUrl}`, resp);
       throw new Error(resp);
+    }
+    if (!includeSubdomains) {
+      break;
     }
     const [first, ...rest] = targetDomain.split(".");
     targetDomain = rest.join(".");
