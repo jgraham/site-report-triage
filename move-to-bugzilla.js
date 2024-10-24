@@ -228,6 +228,7 @@ Until the issue is resolved, you can work around it by disabling Enhanced Tracki
                           sections.expected,
                           sections.actual]
           .map(([title, text]) => [title, text.trim()])
+          .filter(([_, text]) => text.length > 0)
           .map(([title, text]) => `**${title}:**\n${text}`).join("\n\n");
 
     const description = `**Environment:**
