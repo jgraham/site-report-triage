@@ -154,33 +154,12 @@ class IssueForm extends Section {
 
   getBugData(issueData) {
     const controls = this.controls;
-    let preconditionsText = "";
-    if (controls.preconditions.value.trim()) {
-      preconditionsText = `**Preconditions:**
-${controls.preconditions.value.trim()}`;
-    }
-
-    let strText = "";
-    if (controls.str.value.trim()) {
-      strText = `**Steps to reproduce:**
-${controls.str.value.trim()}`;
-    }
-
-    let expectedText = "";
-    if (controls.expectedBehavior.value.trim()) {
-      expectedText = `**Expected Behavior:**
-${controls.expectedBehavior.value.trim()}`;
-    }
-
-    let actualText = "";
-    if (controls.actualBehavior.value.trim()) {
-      actualText = `**Actual Behavior:**
-${controls.actualBehavior.value.trim()}`;
-    }
-    const sectionsText = [preconditionsText,
-                          strText,
-                          expectedText,
-                          actualText].filter(x => x.length).join("\n\n");
+    const sections = {
+      preconditions: ["Preconditions", controls.preconditions.value.trim()],
+      str: ["Steps to reproduce", controls.str.value.trim()],
+      expected: ["Expected Behavior", controls.expectedBehavior.value.trim()],
+      actual: ["Actual Behavior:", controls.actualBehavior.value.trim()],
+    };
 
     const os = getOS(controls.operatingSystem.value);
     const platform = os === "Android" ? "Arm" : (os === "Unspecified" ? "Unspecified" : "Desktop");
@@ -214,18 +193,23 @@ ${controls.actualBehavior.value.trim()}`;
     const keywords = ["webcompat:site-report"];
 
     let closeMessage;
+    const preconditionsHasETP = /\bETP\b/gim.test(sections.preconditions[1]);
     if (etpState === "strict") {
       dependsOn.push("1101005");
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
 
 Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
-      keywords.push("webcompat:platform-bug");
+      if (!preconditionsHasETP) {
+        sections.preconditions[1] += `\n* ETP set to Strict`;
+      }
     } else if (etpState === "strict-standard") {
+      dependsOn.push("1480137");
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
-      dependsOn.push("1480137");
-      keywords.push("webcompat:platform-bug");
+      if (!preconditionsHasETP) {
+        sections.preconditions[1] += `\n* ETP set to Standard or Strict`;
+      }
     } else {
       let reproducesMessage = "";
       if (reproducesIn.length) {
@@ -238,6 +222,13 @@ Until the issue is resolved, you can work around it by disabling Enhanced Tracki
       closeMessage = `Thanks for the report. ${reproducesMessage}`;
     }
     closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
+
+    const sectionsText = [sections.preconditions,
+                          sections.str,
+                          sections.expected,
+                          sections.actual]
+          .map(([title, text]) => [title, text.trim()])
+          .map(([title, text]) => `**${title}:**\n${text}`).join("\n\n");
 
     const description = `**Environment:**
 Operating system: ${controls.operatingSystem.value}
