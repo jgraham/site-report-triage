@@ -271,11 +271,29 @@ function getDependsOn(dependsOn, controls) {
 }
 
 async function getRank(url) {
-  const urlRank = await browser.runtime.sendMessage({
-    type: "get-tranco-rank",
+  let urlRank = await browser.runtime.sendMessage({
+    type: "get-crux-rank",
     url,
-    searchParentDomains: false,
+    searchPrefixes: ['www', 'm'],
   });
+
+  if (urlRank === null) {
+    return null;
+  }
+
+  urlRank.source = "crux";
+  if (urlRank.rank <= 1000) {
+    const trancoUrlRank = await browser.runtime.sendMessage({
+      type: "get-tranco-rank",
+      url: urlRank.rankedDomain,
+      searchParentDomains: false,
+    });
+    if (trancoUrlRank !== null && trancoUrlRank.rank <= 1000) {
+      urlRank = trancoUrlRank;
+      urlRank.source = "tranco";
+    }
+  }
+
   return urlRank;
 }
 

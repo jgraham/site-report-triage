@@ -60,6 +60,8 @@ browser.runtime.onMessage.addListener((data, sender) => {
       return getIssueData(data);
     case "move-to-bugzilla":
       return moveToBugzilla(data);
+    case "get-crux-rank":
+      return cruxRank(data);
     case "get-tranco-rank":
       return trancoRank(data);
     default:
@@ -219,6 +221,52 @@ Closing as moved.`;
 
 }
 
+async function cruxRank(data) {
+  let {url} = data;
+  const {searchPrefixes = []} = data;
+
+  if (!url) {
+    return null;
+  }
+
+  if (!url.includes("://")) {
+    url = `https://${url}`;
+  }
+  const parsedUrl = new URL(url);
+  const host = parsedUrl.host;
+  let targetDomains = [host];
+  for (const prefix of searchPrefixes) {
+    if (!host.startsWith(`${prefix}.`)) {
+      targetDomains.push(`${prefix}.${host}`);
+    } else {
+      targetDomains.push(host.slice(prefix.length + 1));
+    }
+  }
+  const promises = [];
+  for (const targetDomain of targetDomains) {
+    promises.push((async () => {
+      const domainRankUrl = await getCruxUrl(targetDomain);
+      const resp = await fetch(domainRankUrl);
+      const rv = {rankedDomain: targetDomain, rank: null};
+      if (resp.status === 200) {
+        const data = await resp.json();
+        // TODO: check if this is actually correct for the latest date
+        if (data && data.ranks.length) {
+          rv.rank = data.ranks[0].rank;
+        }
+      } else if (resp.status !== 404) {
+        throw new Error(resp);
+      }
+      return rv;
+    })());
+  }
+  const results = await Promise.all(promises);
+  return results.reduce((current, candidate) => (
+    current.rank === null || (candidate.rank !== null && candidate.rank < current.rank)
+  ) ? candidate : current, {rank: null});
+}
+
+
 async function trancoRank(data) {
   let {url} = data;
   const {searchParentDomains = true} = data;
@@ -262,11 +310,19 @@ async function trancoRank(data) {
 }
 
 
-async function getTrancoUrl(domain) {
+function getCruxUrl(domain) {
+  return getRankUrl(domain, "jgraham.github.io", "crux-ranks");
+}
+
+function getTrancoUrl(domain) {
+  return getRankUrl(domain, "jgraham.github.io", "tranco-subdomains");
+}
+
+async function getRankUrl(domain, dataDomain, dataPath) {
   const msg = new TextEncoder().encode(domain);
   const hashBuffer = await crypto.subtle.digest("SHA-1", msg);
   const sha1 = Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  return `https://jgraham.github.io/tranco-subdomains/ranks/domains/${sha1.slice(0,2)}/${sha1.slice(2,4)}/${sha1.slice(4)}.json`;
+  return `https://${dataDomain}/${dataPath}/ranks/domains/${sha1.slice(0,2)}/${sha1.slice(2,4)}/${sha1.slice(4)}.json`;
 }
