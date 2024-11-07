@@ -512,9 +512,9 @@ class OutreachSection extends Section {
     Object.assign(controls, {
       status: new SelectControl(state, "outreach-status"),
       assignee: new Control(state, "outreach-assignee"),
-      lastContacted: new DateControl(state, "outreach-last-contacted"),
+      lastContacted: new DateControl(state, "outreach-contact-date"),
       haveResponse: new CheckboxControl(state, "outreach-have-response"),
-      lastResponse: new DateControl(state, "outreach-last-response"),
+      lastResponse: new DateControl(state, "outreach-response-date"),
       reference: new Control(state, "outreach-reference"),
     });
 
@@ -522,11 +522,11 @@ class OutreachSection extends Section {
       controls.assignee.value = parseUserName(bugData.user);
     }),
 
-      controls.lastContactedToday = new Button(state, "outreach-last-contacted-today", () => {
+      controls.lastContactedToday = new Button(state, "outreach-contact-date-today", () => {
         controls.lastContacted.value = todayString();
       });
 
-    controls.lastResponseToday = new Button(state, "outreach-last-response-today", () => {
+    controls.lastResponseToday = new Button(state, "outreach-response-date-today", () => {
       controls.lastResponse.value = todayString();
     });
 
@@ -588,7 +588,7 @@ class OutreachSection extends Section {
                            {control: controls.lastResponse},
                            {control: controls.reference}]);
 
-    controls.haveResponse.state = userStory.data.has("outreach-last-response");
+    controls.haveResponse.state = userStory.data.has("outreach-response-date");
 
     keywords.setControls([{control: controls.status}]);
   }
