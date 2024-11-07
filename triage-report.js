@@ -51,6 +51,12 @@ class UserStory {
         }
       }
     }
+
+    for (const [name, {control, defaultFn}] of controlsByName.entries()) {
+      if (!this.data.has(name)) {
+        control.state = defaultFn ? defaultFn(control) : (control.defaultState ?? "");
+      }
+    }
   }
 
   getFromControls(controls, unsetControls) {
