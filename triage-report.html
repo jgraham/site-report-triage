@@ -7,6 +7,7 @@
   <select id="section-chooser">
     <option value="triage-form">Triage
     <option value="outreach-form">Outreach
+    <option value="platform-form">Platform
   </select>
 </header>
 <section id="triage-initial">
@@ -262,6 +263,21 @@
     <p><a target="_blank" href="https://docs.google.com/document/d/1RFoVLiTGXQIbe3XZlyAkczmqlVI4NGc8TEIHdKB7-DM/edit#heading=h.85wx30ovvpn1">Triage Help</a></p>
     <button id="outreach-reset">Reset</button>
     <button class="primary" id="outreach-update-bug">Update Bug</button>
+  </div>
+</section>
+
+<section id="platform-form" hidden>
+  <div class="form">
+
+    <label for="platform-scheduled">Scheduled Date</label>
+    <ul class="input-list-inline">
+      <li><input type="date" id="platform-scheduled">
+    </ul>
+  </div>
+
+  <div class="actions">
+    <button id="platform-reset">Reset</button>
+    <button class="primary" id="platform-update-bug">Update Bug</button>
   </div>
 </section>
 

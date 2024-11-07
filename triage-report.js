@@ -322,6 +322,9 @@ function getDefaultSection(sections, bugData) {
     }
   }
   let id = "triage-form";
+  if (bugData.component != "Web Compatibility" && bugData.keywords.includes("webcompat:platform-bug")) {
+    id = "platform-form";
+  }
   if (needsOutreach && hasImpact && bugData.severity !== "--") {
     id = "outreach-form";
   }
@@ -600,6 +603,40 @@ class OutreachSection extends Section {
   }
 }
 
+class PlatformSection extends Section {
+  async create(state, {sections, tab, bugData}) {
+    const controls = this.controls;
+
+    Object.assign(controls, {
+      scheduledDate: new DateControl(state, "platform-scheduled"),
+    });
+
+    const updateButton = new Button(state, "platform-update-bug", async () => {
+      updateButton.disabled = true;
+      const userStory = new UserStory(bugData.cf_user_story);
+      const data = {
+        userStory: userStory.getFromControls([controls.scheduledDate]),
+      };
+      try {
+        await browser.tabs.sendMessage(tab.id, { type: "set-bug-data", ...data });
+        sections.serializeOnClose = false;
+      } finally {
+        window.close();
+      }
+    });
+
+    controls.resetButton = new Button(state, "platform-reset",
+                                      () => this.populate({bugData}));
+  }
+
+  async populate({bugData}) {
+    const controls = this.controls;
+    const userStory = new UserStory(bugData.cf_user_story);
+
+    userStory.setControls([{control: controls.scheduledDate}]);
+  }
+}
+
 async function init() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
@@ -611,6 +648,7 @@ async function init() {
   for (const [sectionId, cls] of [["triage-initial", Section],
                                   ["triage-form", TriageSection],
                                   ["outreach-form", OutreachSection],
+                                  ["platform-form", PlatformSection],
                                   ["error", ReadOnlySection]]) {
     sections.add(sectionId, cls);
   }
