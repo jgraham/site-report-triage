@@ -180,7 +180,7 @@ function getSeverity(controls, rankData) {
 
   const affectsModifier = parseFloat(controls.affects.value);
 
-  const platformModifier = controls.platforms.value.map(x => parseFloat(x)).reduce((x, y) => x + y);
+  const platformModifier = controls.platforms.value.map(x => parseFloat(x)).reduce((x, y) => x + y, 0);
 
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
   let severity = "S4";
