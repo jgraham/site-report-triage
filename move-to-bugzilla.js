@@ -158,7 +158,7 @@ class IssueForm extends Section {
       preconditions: ["Preconditions", controls.preconditions.value.trim()],
       str: ["Steps to reproduce", controls.str.value.trim()],
       expected: ["Expected Behavior", controls.expectedBehavior.value.trim()],
-      actual: ["Actual Behavior:", controls.actualBehavior.value.trim()],
+      actual: ["Actual Behavior", controls.actualBehavior.value.trim()],
     };
 
     const os = getOS(controls.operatingSystem.value);
