@@ -311,6 +311,13 @@ export class CheckboxControl extends Control {
   isValidState(value) {
     return value === true || value === false;
   }
+
+  get defaultState() {
+    if (this.elem.dataset.defaultState) {
+      return this.elem.dataset.defaultState != "";
+    }
+    return this.elem.hasAttribute("checked");
+  }
 }
 
 export class SelectControl extends Control {
@@ -360,6 +367,18 @@ export class SelectControl extends Control {
 
   isValidState(value) {
     return this.datasetValues("state").has(value);
+  }
+
+  get defaultState() {
+    if (this.elem.dataset.defaultState) {
+      return this.elem.dataset.defaultState;
+    }
+    for (let option of this.elem.options) {
+        if (option.dataset["state"] !== undefined) {
+          return option.dataset["state"];
+        }
+    }
+    return "";
   }
 }
 
@@ -412,6 +431,11 @@ export class CheckboxListControl extends Control {
   isValidState(value) {
     const stateValues = new Set(this.checkboxes.map(elem => elem.name));
     return value.every(x => stateValues.has(x));
+  }
+
+  get defaultState() {
+    const defaultChecked = this.checkboxes.filter(control => control.elem.hasAttribute("checked")).map(control => control.name);
+    return defaultChecked;
   }
 }
 
