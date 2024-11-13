@@ -31,7 +31,9 @@ class UserStory {
     if (control.constructor === CheckboxListControl) {
       return control.state.join(",");
     }
-    if (control.state !== control.defaultState)  {
+    const serializeOptionsStr = control.datasetValue("serializeOptions") || "";
+    const serializeOptions = new Set(serializeOptionsStr.split(",").map(item => item.trim()));
+    if (!serializeOptions.has("no-default") || control.state !== control.defaultState)  {
       return control.state;
     }
     return null;
@@ -121,7 +123,7 @@ class Keywords {
           settableKeywords.add(value);
         }
       }
-      const value = control.datasetValue("keyword");
+      const value = control.currentDatasetValue("keyword");
       if (value) {
         wantKeywords.add(value);
       }
@@ -559,6 +561,7 @@ class OutreachSection extends Section {
           controls.status.state = "contact-in-progress";
         }
       } else {
+        controls.lastResponse.state = controls.lastResponse.defaultState;
         controls.lastResponse.hide();
         controls.lastResponseToday.hide();
       }

@@ -30,7 +30,7 @@
         <ul class="input-list-inline">
           <li><input id="url" pattern="[^\s]+">
           <li><label for="login">Login</label>
-            <select id="login" data-default-state="none">
+            <select id="login">
               <option data-state=none>None
               <option data-state=needs-login data-keyword="webcompat:needs-login">Needs Login
               <option data-state=have-login data-keyword="webcompat:have-login">Have Login
@@ -99,7 +99,7 @@
     <h2>Performance Impact</h2>
     <div class="form performance">
       <label for="performance-impact-browser">Browser Impact</label>
-      <select id="performance-impact-browser" data-default-state=none>
+      <select id="performance-impact-browser" data-serialize-options="no-default">
         <option data-state=none value=0>None
           <hr>
         <option data-state=unusable value=300 data-keyword="perf:responsiveness">Unusable
@@ -109,25 +109,25 @@
         <option data-state=shutdown-delay value=60>Noticable Shutdown Delay
       </select>
       <label for="performance-impact-content">Content Impact</label>
-      <select id="performance-impact-content" data-default-state=none>
+      <select id="performance-impact-content" data-serialize-options="no-default">
         <option data-state=none value=0>None
         <option data-state=unusable value=100  data-keyword="perf:responsiveness">Site unusable
         <option data-state=jank value=60 data-keyword="perf:responsiveness">Noticable Jank
       </select>
       <label for="performance-impact-page-load">Page Load Impact</label>
-      <select id="performance-impact-page-load" data-default-state=none>
+      <select id="performance-impact-page-load" data-serialize-options="no-default">
         <option data-state=none value=0>None
         <option data-state=severe value=80>Severe
         <option data-state=noticable value=40>Noticable
       </select>
       <label for="performance-impact-resources">Resource Impact</label>
-      <select id="performance-impact-resources" data-default-state=none>
+      <select id="performance-impact-resources" data-serialize-options="no-default">
         <option data-state=none value=0>None
         <option data-state=severe value=60>Severe
         <option data-state=some value=12>Some
       </select>
       <label for="performance-impact-animation">Animation Impact</label>
-      <select id="performance-impact-animation" data-default-state=none>
+      <select id="performance-impact-animation" data-serialize-options="no-default">
         <option data-state=none value=0>None
         <option data-state=some value=30 data-keyword="perf:animation">Affects Smoothness
       </select>
@@ -139,7 +139,7 @@
     <label for="status">Status</label>
     <ul class="input-list-inline">
       <li>
-        <select id="status" data-default-state=needs-diagnosis>
+        <select id="status" data-serialize-options="no-default">
           <option data-state=needs-diagnosis data-keyword="webcompat:needs-diagnosis">Needs Diagnosis
           <option data-state=platform-bug data-keyword="webcompat:platform-bug">Platform bug
           <option data-state=sitebug>Site bug
@@ -150,7 +150,7 @@
     </ul>
 
     <label for="sitepatch">Intervention</label>
-    <select id="sitepatch" data-default-state=none>
+    <select id="sitepatch" data-serialize-options="no-default">
       <option data-state=none>None
       <option data-state=needs-sitepatch data-keyword="webcompat:needs-sitepatch">Needs Sitepatch
       <option data-state=applied data-keyword="webcompat:sitepatch-applied">Sitepatch Applied
@@ -158,16 +158,16 @@
     </select>
 
     <label for="outreach">Outreach</label>
-    <select id="outreach" data-default-state=none>
+    <select id="outreach" data-serialize-options="no-default">
       <option data-state=none>None
       <option data-state=needs-contact data-keyword="webcompat:needs-contact">Needs Contact
       <option data-state=contact-ready data-keyword="webcompat:contact-ready">Have Contact
       <option data-state=contact-in-progress data-keyword="webcompat:contact-in-progress">Contact in Progress
-      <option id="outreach-contact-complete" data-keyword="webcompat:contact-complete">Contact Complete
+      <option data-state=contact-complete data-keyword="webcompat:contact-complete">Contact Complete
     </select>
 
     <label for="diagnosis-team">Diagnosis Team</label>
-    <select id="diagnosis-team" data-default-state=none>
+    <select id="diagnosis-team" data-serialize-options="no-default">
       <option data-state=none>None
       <option data-state=webcompat>Web Compat
       <option data-state=a11y>Accessibility
@@ -228,7 +228,7 @@
 <section id="outreach-form" hidden>
   <div class="form">
     <label for="outreach-status">Outreach Status</label>
-    <select id="outreach-status">
+    <select id="outreach-status" data-serialize-options="no-default">
       <option data-state=none>None
       <option data-state=needs-contact data-keyword="webcompat:needs-contact">Needs Contact
       <option data-state=contact-ready data-keyword="webcompat:contact-ready">Have Contact
@@ -238,25 +238,25 @@
 
     <label for="outreach-assignee">Assignee</label>
     <ul class="input-list-inline">
-      <li><input id="outreach-assignee">
+      <li><input id="outreach-assignee" data-serialize-options="no-default">
       <li><button id="outreach-assign-me">Assign me</button>
     </ul>
 
     <label for="outreach-last-contacted">Last Contacted</label>
     <ul class="input-list-inline">
-      <li><input type="date" id="outreach-contact-date">
+      <li><input type="date" id="outreach-contact-date" data-serialize-options="no-default">
       <li><button id="outreach-contact-date-today">Set to today</button>
     </ul>
 
     <label for="outreach-last-response">Last Response</label>
     <ul class="input-list-inline">
       <li><label>Have response<input type=checkbox id="outreach-have-response"></label>
-      <li><input type="date" id="outreach-response-date">
+      <li><input type="date" id="outreach-response-date" data-serialize-options="no-default">
       <li><button id="outreach-response-date-today">Set to today</button>
     </ul>
 
     <label for="outreach-reference">Details URL</label>
-    <input id="outreach-reference">
+    <input id="outreach-reference" data-serialize-options="no-default">
   </div>
 
   <div class="actions">

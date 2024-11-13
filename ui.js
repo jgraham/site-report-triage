@@ -246,6 +246,10 @@ export class Control extends UiElement {
     return null;
   }
 
+  currentDatasetValue(key) {
+    return this.datasetValue(key);
+  }
+
   datasetValues(key) {
     const values = new Set();
     if (this.elem.dataset[key]) {
@@ -301,9 +305,9 @@ export class CheckboxControl extends Control {
     this.signal.value = this.getValueFromElement();
   }
 
-  datasetValue(key) {
-    if (this.elem.checked && this.elem.dataset[key]) {
-      return this.elem.dataset[key];
+  currentDatasetValue(key) {
+    if (this.elem.checked) {
+      return this.datasetValue(key);
     }
     return null;
   }
@@ -335,10 +339,6 @@ export class SelectControl extends Control {
     this.signal.value = this.elem.value;
   }
 
-  get defaultState() {
-    return this.elem.dataset.defaultState;
-  }
-
   selectedElement() {
     const selectedIndex = this.elem.selectedIndex;
     if (selectedIndex === -1) {
@@ -347,7 +347,7 @@ export class SelectControl extends Control {
     return this.elem[selectedIndex];
   }
 
-  datasetValue(key) {
+  currentDatasetValue(key) {
     const elem = this.selectedElement();
     if (elem && elem.dataset[key]) {
       return elem.dataset[key];
@@ -357,6 +357,9 @@ export class SelectControl extends Control {
 
   datasetValues(key) {
     const values = new Set();
+    if (this.elem.dataset[key]) {
+      values.add(this.elem.dataset[key]);
+    }
     for (const option of this.elem.options) {
       if (option.dataset[key]) {
         values.add(option.dataset[key]);
