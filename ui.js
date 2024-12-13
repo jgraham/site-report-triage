@@ -456,6 +456,13 @@ export class OutputControl extends UiElement {
     });
   }
 
+  get name() {
+    if(this.elem.name) {
+      return this.elem.name;
+    }
+    return this.elem.id;
+  }
+
   get value() {
     return this.elem.value;
   }

@@ -31,6 +31,9 @@ class UserStory {
     if (control.constructor === CheckboxListControl) {
       return control.state.join(",");
     }
+    if (control.constructor === OutputControl) {
+      return control.value;
+    }
     const serializeOptionsStr = control.datasetValue("serializeOptions") || "";
     const serializeOptions = new Set(serializeOptionsStr.split(",").map(item => item.trim()));
     if (!serializeOptions.has("no-default") || control.state !== control.defaultState)  {
@@ -410,7 +413,7 @@ class TriageSection extends Section {
     });
     controls.severity = new OutputControl(state, "severity", () => severity.value.severity);
     controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
-    controls.score = new OutputControl(state, "score", () => score.value);
+    controls.score = new OutputControl(state, "user-impact-score", () => score.value);
 
     const updateButton = new Button(state, "update-bug", async () => {
       updateButton.disabled = true;
@@ -426,7 +429,8 @@ class TriageSection extends Section {
                                  controls.configuration,
                                  controls.affects,
                                  controls.branch,
-                                 controls.diagnosisTeam];
+                                 controls.diagnosisTeam,
+                                 controls.score];
       const unsetUserStoryControls = [];
 
       // Only set this if we want to change the product / component
