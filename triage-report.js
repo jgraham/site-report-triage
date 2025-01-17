@@ -190,10 +190,7 @@ function getSeverity(controls, rankData) {
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
   let severity = "S4";
   if (severityScore >= 100) {
-    if (rank && rank <= 100) {
-      severity = "S1";
-    } else {
-      severity = "S2";
+    if (rank && rank.globalRank && rank.globalRank <= 100) {
     }
   } else if (severityScore > 50) {
     severity = "S2";
@@ -209,7 +206,7 @@ function getSeverity(controls, rankData) {
 }
 
 function getPriority(rankData, severity, regression) {
-  const rank = rankData ? rankData.rank : null;
+  const rank = rankData ? rankData.globalRank : null;
 
   const severityRank = parseInt(severity.severity[1]);
   let priority;
@@ -282,26 +279,23 @@ function getDependsOn(dependsOn, controls) {
 }
 
 async function getRank(url) {
-  let urlRank = await browser.runtime.sendMessage({
-    type: "get-crux-rank",
-    url,
-    searchPrefixes: ['www', 'm'],
-  });
-
-  if (urlRank === null) {
+  if (!url.trim()) {
     return null;
   }
+  const urlRank = await browser.runtime.sendMessage({
+    type: "get-crux-rank",
+    yyyymm: "202409",
+    url,
+  });
 
-  urlRank.source = "crux";
-  if (urlRank.rank <= 1000) {
+  if (urlRank.globalRank === null || urlRank.globalRank <= 1000) {
     const trancoUrlRank = await browser.runtime.sendMessage({
       type: "get-tranco-rank",
-      url: urlRank.rankedDomain,
+      url,
       searchParentDomains: false,
     });
-    if (trancoUrlRank !== null && trancoUrlRank.rank <= 1000) {
-      urlRank = trancoUrlRank;
-      urlRank.source = "tranco";
+    if (trancoUrlRank !== null && trancoUrlRank.rank !== null) {
+      urlRank.globalRank = trancoUrlRank.rank;
     }
   }
 
@@ -402,7 +396,7 @@ class TriageSection extends Section {
       }
     });
 
-    controls.rank = new OutputControl(state, "rank", () => rank.value ? rank.value.rank : "null");
+    controls.rank = new OutputControl(state, "rank", () => rank.value ? rank.value.globalRank : "null");
     controls.rankDomain = new OutputControl(state, "rank-domain", (control) => {
       if (rank.value) {
         control.show();
