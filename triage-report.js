@@ -452,14 +452,28 @@ class TriageSection extends Section {
       } else {
         unsetUserStoryControls.push(...this.performanceControls);
       }
+
       const data = {
-        priority: controls.priority.value,
-        severity: controls.severity.value,
         url: controls.url.value,
         keywords: keywords.getFromControls(keywordControls, ["webcompat:site-report"]),
         userStory: userStory.getFromControls(userStoryControls, unsetUserStoryControls),
         dependsOn: getDependsOn(bugData.dependson, controls),
       };
+      if (bugData.product === "Web Compatibility") {
+        data.priority = controls.priority.value;
+        data.severity = controls.severity.value;
+        data.webcompatPriority = controls.priority.value;
+      } else if (bugData.product === "Core" && bugData.component === "Perfomance") {
+        const priorityToImpact = {
+          P1: "high",
+          P2: "medium",
+          P3: "low"
+        };
+        data.performanceImpact = priorityToImpact[controls.priority.value];
+      } else {
+        data.webcompatPriority = controls.priority.value;
+      }
+
       if (productComponent !== null) {
         [data.product, data.component] = productComponent;
       }

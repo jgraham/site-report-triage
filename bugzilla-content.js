@@ -70,6 +70,8 @@ async function setBugData(data) {
     setElementValue("component", data.component, {dispatchChange: true});
   }
   setElementValue("priority", data.priority);
+  setElementValue("cf_webcompat_priority", data.webcompatPriority);
+  setElementValue("cf_performance_impact", data.performanceImpact);
   setElementValue("bug_severity", data.severity);
   setElementValue("bug_file_loc", data.url);
   setElementValue("keywords", data.keywords);
