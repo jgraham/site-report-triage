@@ -176,9 +176,7 @@ function getImpactScore(controls) {
   return score;
 };
 
-function getSeverity(controls, rankData) {
-  const rank = rankData ? rankData.rank : null;
-
+function getScore(rank, controls) {
   const impactScore = getImpactScore(controls);
 
   const configurationModifier = parseFloat(controls.configuration.value);
@@ -188,64 +186,51 @@ function getSeverity(controls, rankData) {
   const platformModifier = controls.platforms.value.map(x => parseFloat(x)).reduce((x, y) => x + y, 0);
 
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
-  let severity = "S4";
-  if (severityScore >= 100) {
-    if (rank && rank.globalRank && rank.globalRank <= 100) {
+
+  const interventionScore = controls.sitepatch.value === "applied" ? 0.1 : 1;
+
+  let rankScore = 1;
+  if (rank !== null) {
+    if (rank.globalRank != null && rank.globalRank <= 1000) {
+      rankScore = 15;
+    } else if (rank.localRank != null && rank.localRank <= 1000) {
+      rankScore = 10;
+    } else if (rank.globalRank != null && rank.globalRank <= 10000) {
+      rankScore = 7.5;
+    } else if (rank.localRank != null && rank.localRank <= 10000) {
+      rankScore = 5;
     }
-  } else if (severityScore > 50) {
+  }
+
+  const totalScore = severityScore * interventionScore * rankScore;
+
+  return {severityScore, totalScore};
+}
+
+function getSeverity(score) {
+  const {severityScore, totalScore} = score;
+
+  let severity = "S4";
+  if (severityScore > 50) {
     severity = "S2";
   } else if (severityScore > 25) {
     severity = "S3";
-  } else {
-    severity = "S4";
   }
-  return {
-    severity,
-    severityScore
-  };
+
+  return severity;
+
 }
 
-function getPriority(rankData, severity, regression) {
-  const rank = rankData ? rankData.globalRank : null;
+function getPriority(score, regression) {
+  let {totalScore} = score;
 
-  const severityRank = parseInt(severity.severity[1]);
-  let priority;
-  let priorityScore;
-  if (regression) {
+  let priority = "P3";
+  if (regression || totalScore > 750) {
     priority = "P1";
-    priorityScore = 10;
-  } else if (rank === null || rank > 100_000) {
-    priority = "P3";
-    priorityScore = 1;
-  } else if (rank > 10_000) {
-    priorityScore = 2;
-    if (severityRank >= 3) {
-      priority = "P3";
-    } else {
-      priority = "P2";
-    }
-  } else if (rank > 1000) {
-    priorityScore = 5;
-    if (severityRank === 4) {
-      priority = "P3";
-    } else if (severityRank === 3) {
-      priority = "P2";
-    } else {
-      priority = "P1";
-    }
-  } else {
-    priorityScore = 10;
-    if (severityRank >= 3) {
-      priority = "P2";
-    } else {
-      priority = "P1";
-    }
+  } else if (totalScore > 100) {
+    priority = "P2";
   }
-  return {priority, priorityScore};
-}
-
-function computeScore(severity, priority) {
-  return severity.severityScore * priority.priorityScore;
+  return priority;
 }
 
 function getEtpType(dependsOn) {
@@ -368,9 +353,9 @@ class TriageSection extends Section {
       rank.value = await getRank(controls.url.value);
     });
 
-    const severity = state.computed(() => getSeverity(controls, rank.value));
-    const priority = state.computed(() => getPriority(rank.value, severity.value, controls.regression.value));
-    const score = state.computed(() => computeScore(severity.value, priority.value));
+    const score = state.computed(() => getScore(rank.value, controls));
+    const severity = state.computed(() => getSeverity(score.value));
+    const priority = state.computed(() => getPriority(score.value, controls.regression.value));
 
     state.effect(() => {
       // Weird mix of .value and .state is so this only depends on controls.status
@@ -417,9 +402,10 @@ class TriageSection extends Section {
       }
       return parts.join(" ");
     });
-    controls.severity = new OutputControl(state, "severity", () => severity.value.severity);
-    controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
-    controls.score = new OutputControl(state, "user-impact-score", () => score.value);
+
+    controls.severity = new OutputControl(state, "severity", () => severity.value);
+    controls.priority = new OutputControl(state, "priority", () => priority.value);
+    controls.score = new OutputControl(state, "user-impact-score", () => score.value.totalScore);
 
     const updateButton = new Button(state, "update-bug", async () => {
       updateButton.disabled = true;
