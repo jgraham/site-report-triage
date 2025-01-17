@@ -222,48 +222,38 @@ Closing as moved.`;
 }
 
 async function cruxRank(data) {
-  let {url} = data;
+  let {url, yyyymm} = data;
   const {searchPrefixes = []} = data;
+  const rv = {rankedDomain: null, globalRank: null, localRank: null};
 
   if (!url) {
-    return null;
+    return rv;
   }
 
   if (!url.includes("://")) {
     url = `https://${url}`;
   }
   const parsedUrl = new URL(url);
-  const host = parsedUrl.host;
-  let targetDomains = [host];
-  for (const prefix of searchPrefixes) {
-    if (!host.startsWith(`${prefix}.`)) {
-      targetDomains.push(`${prefix}.${host}`);
-    } else {
-      targetDomains.push(host.slice(prefix.length + 1));
+  let host = parsedUrl.host;
+  if (host.startsWith("www.") || host.startsWith("m.")) {
+    const [prefix, ...rest] = host.split(".");
+    host = rest.join(".");
+  }
+  rv.rankedDomain = host;
+  const domainRankUrl = await getCruxUrl(host);
+  const resp = await fetch(domainRankUrl);
+  if (resp.status === 200) {
+    const data = await resp.json();
+    // TODO: check if this is actually correct for the latest date
+    if (data) {
+      const [globalRank, localRank] = data[1][yyyymm];
+      rv.globalRank = globalRank;
+      rv.localRank = localRank;
     }
+  } else if (resp.status !== 404) {
+    throw new Error(resp);
   }
-  const promises = [];
-  for (const targetDomain of targetDomains) {
-    promises.push((async () => {
-      const domainRankUrl = await getCruxUrl(targetDomain);
-      const resp = await fetch(domainRankUrl);
-      const rv = {rankedDomain: targetDomain, rank: null};
-      if (resp.status === 200) {
-        const data = await resp.json();
-        // TODO: check if this is actually correct for the latest date
-        if (data && data.ranks.length) {
-          rv.rank = data.ranks[0].rank;
-        }
-      } else if (resp.status !== 404) {
-        throw new Error(resp);
-      }
-      return rv;
-    })());
-  }
-  const results = await Promise.all(promises);
-  return results.reduce((current, candidate) => (
-    current.rank === null || (candidate.rank !== null && candidate.rank < current.rank)
-  ) ? candidate : current, {rank: null});
+  return rv;
 }
 
 
@@ -311,7 +301,7 @@ async function trancoRank(data) {
 
 
 function getCruxUrl(domain) {
-  return getRankUrl(domain, "jgraham.github.io", "crux-ranks");
+  return getRankUrl(domain, "jgraham.github.io", "crux-ranks/v2");
 }
 
 function getTrancoUrl(domain) {
