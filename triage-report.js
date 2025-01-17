@@ -396,14 +396,26 @@ class TriageSection extends Section {
       }
     });
 
-    controls.rank = new OutputControl(state, "rank", () => rank.value ? rank.value.globalRank : "null");
-    controls.rankDomain = new OutputControl(state, "rank-domain", (control) => {
-      if (rank.value) {
-        control.show();
-        return `(${rank.value.rankedDomain})`;
+    controls.rank = new OutputControl(state, "rank", () => {
+      const rankData = rank.value;
+      console.log("Setting rank", rankData);
+      const parts = [];
+      if (!rankData) {
+        return "Missing URL";
       }
-      control.hide();
-      return "";
+      if (rankData.globalRank) {
+        parts.push(`${rankData.globalRank} (global)`);
+      }
+      if (rankData.localRank && (rankData.globalRank === null || rankData.localRank < rankData.globalRank)) {
+        parts.push(`${rankData.localRank} (local)`);
+      }
+      if (!parts.length) {
+        parts.push("Unranked");
+      }
+      if (rankData.rankedDomain) {
+        parts.push(`[${rankData.rankedDomain}]`);
+      }
+      return parts.join(" ");
     });
     controls.severity = new OutputControl(state, "severity", () => severity.value.severity);
     controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
