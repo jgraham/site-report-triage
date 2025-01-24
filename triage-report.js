@@ -486,7 +486,7 @@ class TriageSection extends Section {
         data.severity = controls.severity.value;
         data.webcompatPriority = controls.webcompatPriority.value;
         data.webcompatScore = getWebcompatScoreBucket(controls.score.value);
-      } else if (bugData.product === "Core" && bugData.component === "Perfomance") {
+      } else if (bugData.product === "Core" && bugData.component === "Performance") {
         data.performanceImpact = controls.performanceImpact.value;
       } else {
         data.webcompatPriority = controls.webcompatPriority.value;
