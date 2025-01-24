@@ -208,7 +208,7 @@ function getScore(rank, controls) {
 }
 
 function getSeverity(score) {
-  const {severityScore, totalScore} = score;
+  const {severityScore} = score;
 
   let severity = "S4";
   if (severityScore > 50) {
@@ -224,13 +224,22 @@ function getSeverity(score) {
 function getPriority(score, regression) {
   let {totalScore} = score;
 
-  let priority = "P3";
-  if (regression || totalScore > 750) {
-    priority = "P1";
+  let webcompatPriority = "P3";
+  let performanceImpact = "low";
+  if (totalScore > 750) {
+    webcompatPriority = "P1";
+    performanceImpact = "medium";
   } else if (totalScore > 100) {
-    priority = "P2";
+    webcompatPriority = "P2";
+    performanceImpact = "high";
   }
-  return priority;
+
+  let priority = webcompatPriority;
+  if (regression) {
+    priority = "P1";
+  }
+
+  return {priority, webcompatPriority, performanceImpact};
 }
 
 function getEtpType(dependsOn) {
@@ -373,11 +382,17 @@ class TriageSection extends Section {
 
     state.effect(() => {
       const performanceSubsection = document.getElementById("performance");
+      const performanceImpactControl = document.getElementById("performance-impact-control");
+      const webcompatPriorityControl = document.getElementById("webcompat-priority-control");
       if (controls.impact.value === "performance") {
         performanceSubsection.hidden = false;
+        performanceImpactControl.hidden = false;
+        webcompatPriorityControl.hidden = true;
         controls.diagnosisTeam.state = "performance";
       } else {
         performanceSubsection.hidden = true;
+        performanceImpactControl.hidden = true;
+        webcompatPriorityControl.hidden = false;
       }
     });
 
@@ -404,7 +419,9 @@ class TriageSection extends Section {
     });
 
     controls.severity = new OutputControl(state, "severity", () => severity.value);
-    controls.priority = new OutputControl(state, "priority", () => priority.value);
+    controls.priority = new OutputControl(state, "priority", () => priority.value.priority);
+    controls.webcompatPriority = new OutputControl(state, "webcompat-priority", () => priority.value.webcompatPriority);
+    controls.performanceImpact = new OutputControl(state, "performance-impact", () => priority.value.performanceImpact);
     controls.score = new OutputControl(state, "user-impact-score", () => score.value.totalScore);
 
     const updateButton = new Button(state, "update-bug", async () => {
@@ -448,16 +465,11 @@ class TriageSection extends Section {
       if (bugData.product === "Web Compatibility") {
         data.priority = controls.priority.value;
         data.severity = controls.severity.value;
-        data.webcompatPriority = controls.priority.value;
+        data.webcompatPriority = controls.webcompatPriority.value;
       } else if (bugData.product === "Core" && bugData.component === "Perfomance") {
-        const priorityToImpact = {
-          P1: "high",
-          P2: "medium",
-          P3: "low"
-        };
-        data.performanceImpact = priorityToImpact[controls.priority.value];
+        data.performanceImpact = controls.performanceImpact.value;
       } else {
-        data.webcompatPriority = controls.priority.value;
+        data.webcompatPriority = controls.webcompatPriority.value;
       }
 
       if (productComponent !== null) {
