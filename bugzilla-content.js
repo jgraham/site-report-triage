@@ -71,6 +71,7 @@ async function setBugData(data) {
   }
   setElementValue("priority", data.priority);
   setElementValue("cf_webcompat_priority", data.webcompatPriority);
+  setElementValue("cf_webcompat_score", data.webcompatScore);
   setElementValue("cf_performance_impact", data.performanceImpact);
   setElementValue("bug_severity", data.severity);
   setElementValue("bug_file_loc", data.url);

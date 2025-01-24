@@ -242,6 +242,25 @@ function getPriority(score, regression) {
   return {priority, webcompatPriority, performanceImpact};
 }
 
+function getWebcompatScoreBucket(score) {
+  score = parseInt(score);
+
+  // This should be kept in sync with the logic in BigQuery
+  const limits = [10, 20, 50, 100, 200, 500, 750, 1000, 2000];
+  if (limits.length !== 9) {
+    throw new Error("Need 9 boundaries between score buckets");
+  }
+  let bucket = 1;
+  for (const upperLimit of limits) {
+    if (score < upperLimit) {
+      return bucket;
+    }
+    bucket += 1;
+  }
+  // This must be 10
+  return bucket;
+}
+
 function getEtpType(dependsOn) {
   const entries = dependsOn.split(",").map(item => item.trim());
   if (entries.includes("1101005")) {
@@ -466,10 +485,12 @@ class TriageSection extends Section {
         data.priority = controls.priority.value;
         data.severity = controls.severity.value;
         data.webcompatPriority = controls.webcompatPriority.value;
+        data.webcompatScore = getWebcompatScoreBucket(controls.score.value);
       } else if (bugData.product === "Core" && bugData.component === "Perfomance") {
         data.performanceImpact = controls.performanceImpact.value;
       } else {
         data.webcompatPriority = controls.webcompatPriority.value;
+        data.webcompatScore = getWebcompatScoreBucket(controls.score.value);
       }
 
       if (productComponent !== null) {
