@@ -187,7 +187,7 @@ function getScore(rank, controls) {
 
   const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
 
-  const interventionScore = controls.sitepatch.value === "applied" ? 0.1 : 1;
+  const interventionScore = parseFloat(controls.sitepatch.value);
 
   let rankScore = 1;
   if (rank !== null) {
