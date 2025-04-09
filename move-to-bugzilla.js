@@ -195,7 +195,7 @@ class IssueForm extends Section {
     let closeMessage;
     const preconditionsHasETP = /\bETP\b/gim.test(sections.preconditions[1]);
     if (etpState === "strict") {
-      dependsOn.push("1101005");
+      blocks.push("1101005");
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
 
 Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
@@ -203,7 +203,7 @@ Until the issue is resolved, you can work around it by setting Enhanced Tracking
         sections.preconditions[1] += `\n* ETP set to Strict`;
       }
     } else if (etpState === "strict-standard") {
-      dependsOn.push("1480137");
+      blocks.push("1480137");
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
