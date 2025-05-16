@@ -196,19 +196,19 @@ class IssueForm extends Section {
     const preconditionsHasETP = /\bETP\b/gim.test(sections.preconditions[1]);
     if (etpState === "strict") {
       dependsOn.push("1101005");
-      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict, but not with it set to Standard.
+      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Standard in Private Browsing Mode.
 
-Until the issue is resolved, you can work around it by setting Enhanced Tracking Protection to Standard.`;
+Until the issue is resolved, set ETP to Off in Private Browsing  or to Standard in Normal Browsing.`;
       if (!preconditionsHasETP) {
-        sections.preconditions[1] += `\n* ETP set to Strict`;
+        sections.preconditions[1] += `\n* ETP set to Standard in Private Browsing Mode`;
       }
     } else if (etpState === "strict-standard") {
       dependsOn.push("1480137");
-      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard, but not with it disabled.
+      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard using Private and Normal Browsing mode, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
       if (!preconditionsHasETP) {
-        sections.preconditions[1] += `\n* ETP set to Standard or Strict`;
+        sections.preconditions[1] += `\n* ETP set to Standard in Normal and Private Browsing Modes`;
       }
     } else {
       let reproducesMessage = "";
