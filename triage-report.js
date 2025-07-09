@@ -183,9 +183,11 @@ function getScore(rank, controls) {
 
   const affectsModifier = parseFloat(controls.affects.value);
 
+  const branchModifier = parseFloat(controls.branch.value);
+
   const platformModifier = controls.platforms.value.map(x => parseFloat(x)).reduce((x, y) => x + y, 0);
 
-  const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * platformModifier);
+  const severityScore = Math.round(impactScore * configurationModifier * affectsModifier * branchModifier * platformModifier);
 
   const interventionScore = parseFloat(controls.sitepatch.value);
 
