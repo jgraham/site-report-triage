@@ -263,9 +263,9 @@ function getWebcompatScoreBucket(score) {
   return bucket;
 }
 
-function getEtpType(dependsOn) {
+function getEtpType(keywords, dependsOn) {
   const entries = dependsOn.split(",").map(item => item.trim());
-  if (entries.includes("1101005")) {
+  if (keywords.includes("webcompat:tracker-blocking")) {
     return "strict";
   }
   if (entries.includes("1480137")) {
@@ -513,7 +513,7 @@ class TriageSection extends Section {
     const controls = this.controls;
     const userStory = new UserStory(bugData.cf_user_story);
     const keywords = new Keywords(bugData.keywords);
-    const etpType = getEtpType(bugData.dependson);
+    const etpType = getEtpType(bugData.keywords, bugData.dependson);
 
     controls.url.state = bugData.url;
     controls.initialPriority.state = bugData.priority;
