@@ -195,7 +195,7 @@ class IssueForm extends Section {
     let closeMessage;
     const preconditionsHasETP = /\bETP\b/gim.test(sections.preconditions[1]);
     if (etpState === "strict") {
-      dependsOn.push("1101005");
+      keywords.push("webcompat:tracker-blocking");
       closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Standard in Private Browsing Mode.
 
 Until the issue is resolved, set ETP to Off in Private Browsing  or to Standard in Normal Browsing.`;
