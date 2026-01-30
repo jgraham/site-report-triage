@@ -245,7 +245,7 @@ async function cruxRank(data) {
   if (resp.status === 200) {
     const data = await resp.json();
     // TODO: check if this is actually correct for the latest date
-    if (data) {
+    if (data && data[1] && data[1][yyyymm]) {
       const [globalRank, localRank] = data[1][yyyymm];
       rv.globalRank = globalRank;
       rv.localRank = localRank;
