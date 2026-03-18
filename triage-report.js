@@ -299,7 +299,7 @@ async function getRank(url) {
   }
   const urlRank = await browser.runtime.sendMessage({
     type: "get-crux-rank",
-    yyyymm: "202506",
+    yyyymm: "202512",
     url,
   });
 
