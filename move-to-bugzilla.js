@@ -125,6 +125,7 @@ class IssueForm extends Section {
       str: new Control(state, "str"),
       expectedBehavior: new Control(state, "expected-behavior"),
       actualBehavior: new Control(state, "actual-behavior"),
+      qaStatus: new SelectControl(state, "qa-status"),
       etp: new SelectControl(state, "etp"),
       reproduces: new CheckboxListControl(state, "reproduces"),
       extraNotes: new Control(state, "extra-notes"),
@@ -135,6 +136,17 @@ class IssueForm extends Section {
         bugFormSection.populate({bugData});
         sections.show("bug-form");
       })
+    });
+
+
+    state.effect(() => {
+      if (controls.qaStatus.value == "reproduced") {
+        controls.etp.elem.disabled = false;
+        controls.reproduces.checkboxes.forEach(ctrl => ctrl.elem.disabled = false);
+      } else {
+        controls.etp.elem.disabled = true;
+        controls.reproduces.checkboxes.forEach(ctrl => ctrl.elem.disabled = true);
+      }
     });
   }
 
@@ -165,20 +177,28 @@ class IssueForm extends Section {
     const platform = os === "Android" ? "Arm" : (os === "Unspecified" ? "Unspecified" : "Desktop");
 
     let notes = [];
-    if (controls.etp.state !== "other") {
-      notes.push(controls.etp.value);
-    }
     const reproducesIn = [];
     const doesNotReproduceIn = [];
     for (const control of controls.reproduces.checkboxes) {
       const target = control.state ? reproducesIn : doesNotReproduceIn;
       target.push(control.name);
     }
-    if (reproducesIn.length) {
-      notes.push(`Reproduces in ${joinListStr(reproducesIn)}`);
-    }
-    if (doesNotReproduceIn.length) {
-      notes.push(`Does not reproduce in ${joinListStr(doesNotReproduceIn)}`);
+    if (controls.qaStatus.value != "reproduced") {
+      if (controls.qaStatus.value == "not-reproduced-login") {
+        notes.push("The issue is believed to be valid, but was not reproduced as it requires a login");
+      } else {
+        notes.push("The issue is believed to be valid, but was not reproduced");
+      }
+    } else {
+      if (controls.etp.state !== "other") {
+        notes.push(controls.etp.value);
+      }
+      if (reproducesIn.length) {
+        notes.push(`Reproduces in ${joinListStr(reproducesIn)}`);
+      }
+      if (doesNotReproduceIn.length) {
+        notes.push(`Does not reproduce in ${joinListStr(doesNotReproduceIn)}`);
+      }
     }
     let extraNotesText = "";
     if (controls.extraNotes.value.trim().length) {
@@ -194,34 +214,40 @@ class IssueForm extends Section {
 
     let closeMessage;
     const preconditionsHasETP = /\bETP\b/gim.test(sections.preconditions[1]);
-    if (etpState === "strict") {
-      dependsOn.push("1101005");
-      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Standard in Private Browsing Mode.
+    if (controls.qaStatus.state != "reproduced") {
+      closeMessage = `Thanks for the report. I was unable to reproduce, but based on the data you provided think it is likely a valid issue.
+
+Valid issues are moved to our Bugzilla component; please see: `;
+    } else {
+      if (etpState === "strict") {
+        dependsOn.push("1101005");
+        closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Standard in Private Browsing Mode.
 
 Until the issue is resolved, set ETP to Off in Private Browsing  or to Standard in Normal Browsing.`;
-      if (!preconditionsHasETP) {
-        sections.preconditions[1] += `\n* ETP set to Standard in Private Browsing Mode`;
-      }
-    } else if (etpState === "strict-standard") {
-      dependsOn.push("1480137");
-      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard using Private and Normal Browsing mode, but not with it disabled.
+        if (!preconditionsHasETP) {
+          sections.preconditions[1] += `\n* ETP set to Standard in Private Browsing Mode`;
+        }
+      } else if (etpState === "strict-standard") {
+        dependsOn.push("1480137");
+        closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard using Private and Normal Browsing mode, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
-      if (!preconditionsHasETP) {
-        sections.preconditions[1] += `\n* ETP set to Standard in Normal and Private Browsing Modes`;
+        if (!preconditionsHasETP) {
+          sections.preconditions[1] += `\n* ETP set to Standard in Normal and Private Browsing Modes`;
+        }
+      } else {
+        let reproducesMessage = "";
+        if (reproducesIn.length) {
+          reproducesMessage += (`I was able to reproduce in ${joinListStr(reproducesIn)}`);
+        }
+        if (doesNotReproduceIn.length && reproducesMessage.length) {
+          notes.push(`, but not in ${joinListStr(doesNotReproduceIn)}`);
+        }
+        reproducesMessage += ".";
+        closeMessage = `Thanks for the report. ${reproducesMessage}`;
       }
-    } else {
-      let reproducesMessage = "";
-      if (reproducesIn.length) {
-        reproducesMessage += (`I was able to reproduce in ${joinListStr(reproducesIn)}`);
-      }
-      if (doesNotReproduceIn.length && reproducesMessage.length) {
-        notes.push(`, but not in ${joinListStr(doesNotReproduceIn)}`);
-      }
-      reproducesMessage += ".";
-      closeMessage = `Thanks for the report. ${reproducesMessage}`;
+      closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
     }
-    closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
 
     const sectionsText = [sections.preconditions,
                           sections.str,
