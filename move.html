@@ -19,6 +19,12 @@
     <label for=str>Steps to Reproduce:</label><textarea id="str"></textarea>
     <label for=expected-behavior>Expected Behavior:</label><textarea id="expected-behavior"></textarea>
     <label for=actual-behavior>Actual Behavior:</label><textarea id="actual-behavior"></textarea>
+    <label for="qa-status">QA Status</label>
+    <select id="qa-status">
+      <option value="reproduced">Issue was reproduced
+      <option value="not-reproduced-login">Not reproduced (login required)
+      <option value="not-reproduced-other">Not reproduced (please add to description)
+    </select>
     <label for="etp">ETP</label>
     <select id="etp">
       <option data-state="all">Reproduces regardless of the status of ETP
