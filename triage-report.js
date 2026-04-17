@@ -230,10 +230,10 @@ function getPriority(score, regression) {
   let performanceImpact = "low";
   if (totalScore > 750) {
     webcompatPriority = "P1";
-    performanceImpact = "medium";
+    performanceImpact = "high";
   } else if (totalScore > 100) {
     webcompatPriority = "P2";
-    performanceImpact = "high";
+    performanceImpact = "medium";
   }
 
   let priority = webcompatPriority;
@@ -327,7 +327,7 @@ function parseUserName(user) {
 
 function getDefaultSection(sections, bugData) {
   const hasImpact = /impact:/g.test(bugData.cf_user_story);
-  const outreachKeywords = new Set(["webcompat:needs-contact", "webcompat:contact-ready", "webcompat:contact-in-progress", "webcontact:contact-complete", "webcompat:sitewait"]);
+  const outreachKeywords = new Set(["webcompat:needs-contact", "webcompat:contact-ready", "webcompat:contact-in-progress", "webcompat:contact-complete", "webcompat:sitewait"]);
   let needsOutreach = false;
   for (const keyword of bugData.keywords) {
     if (outreachKeywords.has(keyword)) {
