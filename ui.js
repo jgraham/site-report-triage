@@ -387,7 +387,7 @@ export class SelectControl extends Control {
 
 export class DateControl extends Control {
   isValidState(value) {
-    return /\d{4}-\d{2}-\d{2}/.test(value);
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
   }
 }
 
