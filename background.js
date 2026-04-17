@@ -78,20 +78,20 @@ async function githubIssueApi({ issue, path = '', data, method = 'GET' }) {
     ... data,
   };
 
-  if (method !== "GET") {
-    const user = await ensureUser();
-  }
+  const user = await ensureUser();
 
   const request = {
     method,
-    headers: {}
+    headers: {
+      "Content-Type": "application/json"
+    }
   };
 
   if (user !== null) {
     request.headers.Authorization = `token ${user.github_key}`;
   }
 
-  if (method === 'POST') {
+  if (method !== 'GET') {
     request.body = JSON.stringify(body);
   }
 
@@ -177,6 +177,9 @@ async function createBugzillaBug(data) {
   const bugzillaResponse = await fetch('https://bugzilla.mozilla.org/rest/bug', {
     method: 'POST',
     body: JSON.stringify(bugzillaRequest),
+    headers: {
+      "Content-Type": "application/json"
+    }
   });
 
   const response = await bugzillaResponse.json();
@@ -203,7 +206,7 @@ Closing as moved.`;
       // Close issue
       await githubIssueApi({
         issue: githubData,
-        method: 'POST',
+        method: 'PATCH',
         data: {
           state: "closed",
           milestone: 13  // The id of the "moved" milestone
