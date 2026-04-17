@@ -84,10 +84,10 @@ async function checkElementState(elem, cond, observerOptions, options) {
   if (cond(elem)) {
     return;
   }
+  let observer;
   let changed = new Promise(resolve => {
-    const observer = new MutationObserver(records => {
+    observer = new MutationObserver(records => {
       if (cond(elem)) {
-        observer.disconnect();
         resolve();
         return;
       }
@@ -106,5 +106,8 @@ async function checkElementState(elem, cond, observerOptions, options) {
     complete = changed;
   }
   await complete;
+  if (observer) {
+    observer.disconnect();
+  }
   clearTimeout(timeoutHandle);
 }
