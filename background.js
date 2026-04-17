@@ -3,11 +3,11 @@ let user = null;
 const pages = [
   {
     page: "move.html",
-    show_matches: ["^https://github\.com/webcompat/web-bugs/issues/.*"]
+    show_matches: ["^https://github\\.com/webcompat/web-bugs/issues/.*"]
   },
    {
     page: "triage-report.html",
-    show_matches: ["^https://bugzilla\.mozilla.org/show_bug\.cgi\?"]
+    show_matches: ["^https://bugzilla\\.mozilla\\.org/show_bug\\.cgi\\?"]
    },
 ];
 
