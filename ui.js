@@ -419,7 +419,7 @@ export class CheckboxListControl extends Control {
 
   datasetValues(key) {
     const values = new Set();
-    for (const control of this.controls) {
+    for (const control of this.checkboxes) {
       if (control.datasetValue(key)) {
         values.add(control.datasetValue(key));
       }
