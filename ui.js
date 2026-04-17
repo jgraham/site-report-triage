@@ -148,7 +148,7 @@ export class Sections {
         sections[section.id] = sectionData;
       }
     }
-    const currentSection = this.current.persist ? this.current.id : null;
+    const currentSection = this.current?.persist ? this.current.id : null;
     const data = {
       currentSection,
       sections
