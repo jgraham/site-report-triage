@@ -1,23 +1,23 @@
 export class StoredState {
   constructor(key) {
-    self.key = key;
+    this.key = key;
   }
 
   async get() {
-    console.log("Getting state", self.key);
-    const result = await browser.storage.local.get(self.key);
-    return result[self.key] ?? null;
+    console.log("Getting state", this.key);
+    const result = await browser.storage.local.get(this.key);
+    return result[this.key] ?? null;
   }
 
   async set(data) {
-    console.log("Setting state", self.key);
+    console.log("Setting state", this.key);
     const state = {};
-    state[self.key] = data;
+    state[this.key] = data;
     const result = await browser.storage.local.set(state);
   }
 
   async clear() {
-    console.log("Clearing state", self.key);
-    const result = await browser.storage.local.remove(self.key);
+    console.log("Clearing state", this.key);
+    const result = await browser.storage.local.remove(this.key);
   }
 }
