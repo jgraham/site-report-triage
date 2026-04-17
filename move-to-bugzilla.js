@@ -389,7 +389,7 @@ class BugCreatedSection extends Section {
   }
 
   async populate({moveResp}) {
-    this.controls.bugLink.href += moveResp.bugzillaId;
+    this.controls.bugLink.href = `https://bugzilla.mozilla.org/show_bug.cgi?id=${moveResp.bugzillaId}`;
     this.controls.bugLink.textContent = `bug ${moveResp.bugzillaId}`;
 
     if (moveResp.githubError) {
