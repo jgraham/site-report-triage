@@ -25,7 +25,7 @@ function issueInfo(pathname) {
 }
 
 function parseIssueBody(issueData) {
-  const bodyLines = issueData.body.split("\n");
+  const bodyLines = issueData.body ? issueData.body.split(/\r?\n/) : [];
   const fields = {
     url: "",
     browser_version: "",
@@ -269,7 +269,7 @@ Created from ${issueData.html_url}
     if (reproducesIn.includes("firefox-nightly") && !reproducesIn.includes("firefox-release")) {
       keywords.push("regression");
     }
-    if (issueData.milestone.title === "needsdiagnosis") {
+    if (issueData.milestone?.title === "needsdiagnosis") {
       keywords.push("webcompat:needs-diagnosis");
     }
     if (issueData.labels.find(label => label.name == ("action-needssitepatch"))) {
