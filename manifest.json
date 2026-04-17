@@ -16,7 +16,7 @@
     {
       "matches": ["https://bugzilla.mozilla.org/show_bug.cgi?*"],
       "js": ["bugzilla-content.js"],
-      "run_at": "document_start"
+      "run_at": "document_idle"
     }
   ],
   "page_action": {
