@@ -214,39 +214,36 @@ class IssueForm extends Section {
 
     let closeMessage;
     const preconditionsHasETP = /\bETP\b/gim.test(sections.preconditions[1]);
-    if (controls.qaStatus.state != "reproduced") {
+    if (controls.qaStatus.value != "reproduced") {
       closeMessage = `Thanks for the report. I was unable to reproduce, but based on the data you provided think it is likely a valid issue.
 
 Valid issues are moved to our Bugzilla component; please see: `;
-    } else {
-      if (etpState === "strict") {
-        dependsOn.push("1101005");
-        closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Standard in Private Browsing Mode.
+    } else if (etpState === "strict") {
+      dependsOn.push("1101005");
+      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Standard in Private Browsing Mode.
 
 Until the issue is resolved, set ETP to Off in Private Browsing  or to Standard in Normal Browsing.`;
-        if (!preconditionsHasETP) {
-          sections.preconditions[1] += `\n* ETP set to Standard in Private Browsing Mode`;
-        }
-      } else if (etpState === "strict-standard") {
-        dependsOn.push("1480137");
-        closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard using Private and Normal Browsing mode, but not with it disabled.
+      if (!preconditionsHasETP) {
+        sections.preconditions[1] += `\n* ETP set to Standard in Private Browsing Mode`;
+      }
+    } else if (etpState === "strict-standard") {
+      dependsOn.push("1480137");
+      closeMessage = `Thanks for the report. I was able to reproduce the issue with Enhanced Tracking Protection set to Strict and Standard using Private and Normal Browsing mode, but not with it disabled.
 
 Until the issue is resolved, you can work around it by disabling Enhanced Tracking Protection.`;
-        if (!preconditionsHasETP) {
-          sections.preconditions[1] += `\n* ETP set to Standard in Normal and Private Browsing Modes`;
-        }
-      } else {
-        let reproducesMessage = "";
-        if (reproducesIn.length) {
-          reproducesMessage += (`I was able to reproduce in ${joinListStr(reproducesIn)}`);
-        }
-        if (doesNotReproduceIn.length && reproducesMessage.length) {
-          notes.push(`, but not in ${joinListStr(doesNotReproduceIn)}`);
-        }
-        reproducesMessage += ".";
-        closeMessage = `Thanks for the report. ${reproducesMessage}`;
+      if (!preconditionsHasETP) {
+        sections.preconditions[1] += `\n* ETP set to Standard in Normal and Private Browsing Modes`;
       }
-      closeMessage += "\n\nReproducible issues are moved to our Bugzilla component; please see: ";
+    } else {
+      let reproducesMessage = "";
+      if (reproducesIn.length) {
+        reproducesMessage = ` I was able to reproduce the issue in ${joinListStr(reproducesIn)}`;
+        if (doesNotReproduceIn.length) {
+          reproducesMessage += `, but not in ${joinListStr(doesNotReproduceIn)}`;
+        }
+          reproducesMessage += ".";
+      }
+      closeMessage = `Thanks for the report.${reproducesMessage}\n\nReproducible issues are moved to our Bugzilla component; please see: `;
     }
 
     const sectionsText = [sections.preconditions,
