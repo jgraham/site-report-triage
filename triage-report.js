@@ -176,6 +176,33 @@ function getImpactScore(controls) {
   return score;
 };
 
+function getRankScore(rank) {
+  let rankScore = 1;
+  let source = null;
+  if (rank !== null) {
+    if (rank.globalRank != null && rank.globalRank <= 1000) {
+      rankScore = 15;
+      source = "global";
+    } else if (rank.coreRank != null && rank.coreRank <= 1000) {
+      rankScore = 10;
+      source = "core";
+    } else if (rank.globalRank != null && rank.globalRank <= 10000) {
+      rankScore = 7.5;
+      source = "global";
+    } else if (rank.localRank != null && rank.localRank <= 1000) {
+      rankScore = 5;
+      source = "local";
+    } else if (rank.coreRank != null && rank.coreRank <= 10000) {
+      rankScore = 5;
+      source = "core";
+    } else if (rank.localRank != null && rank.localRank <= 10000) {
+      rankScore = 2.5;
+      source = "local";
+    }
+  }
+  return [rankScore, source];
+}
+
 function getScore(rank, controls) {
   const impactScore = getImpactScore(controls);
 
@@ -191,18 +218,7 @@ function getScore(rank, controls) {
 
   const interventionScore = parseFloat(controls.sitepatch.value);
 
-  let rankScore = 1;
-  if (rank !== null) {
-    if (rank.globalRank != null && rank.globalRank <= 1000) {
-      rankScore = 15;
-    } else if (rank.localRank != null && rank.localRank <= 1000) {
-      rankScore = 10;
-    } else if (rank.globalRank != null && rank.globalRank <= 10000) {
-      rankScore = 7.5;
-    } else if (rank.localRank != null && rank.localRank <= 10000) {
-      rankScore = 5;
-    }
-  }
+  const [rankScore, _] = getRankScore(rank);
 
   const totalScore = severityScore * interventionScore * rankScore;
 
@@ -299,7 +315,7 @@ async function getRank(url) {
   }
   const urlRank = await browser.runtime.sendMessage({
     type: "get-crux-rank",
-    yyyymm: "202512",
+    yyyymm: "202603",
     url,
   });
 
@@ -418,25 +434,21 @@ class TriageSection extends Section {
     });
 
     controls.rank = new OutputControl(state, "rank", () => {
-      const rankData = rank.value;
-      console.log("Setting rank", rankData);
-      const parts = [];
-      if (!rankData) {
+      if (!rank.value) {
         return "Missing URL";
       }
-      if (rankData.globalRank) {
-        parts.push(`${rankData.globalRank} (global)`);
+      const [rankScore, rankSource] = getRankScore(rank.value);
+      const rankLookup = {
+        "global": [rank.value.globalRank, "Global"],
+        "core": [rank.value.coreRank, "Core countries"],
+        "local": [rank.value.localRank, "Non-core countries"],
+      };
+      if (rankLookup[rankSource]) {
+        const [rankValue, prettySource] = rankLookup[rankSource];
+        return `${rankValue} ${prettySource} (${rankScore}x modifier) [${rank.value.rankedDomain}]`;
       }
-      if (rankData.localRank && (rankData.globalRank === null || rankData.localRank < rankData.globalRank)) {
-        parts.push(`${rankData.localRank} (local)`);
-      }
-      if (!parts.length) {
-        parts.push("Unranked");
-      }
-      if (rankData.rankedDomain) {
-        parts.push(`[${rankData.rankedDomain}]`);
-      }
-      return parts.join(" ");
+
+      return `Unranked [${rank.value.rankedDomain}]`;
     });
 
     controls.severity = new OutputControl(state, "severity", () => severity.value);

@@ -227,7 +227,7 @@ Closing as moved.`;
 async function cruxRank(data) {
   let {url, yyyymm} = data;
   const {searchPrefixes = []} = data;
-  const rv = {rankedDomain: null, globalRank: null, localRank: null};
+  const rv = {rankedDomain: null, globalRank: null, localRank: null, coreRank: null};
 
   if (!url) {
     return rv;
@@ -248,10 +248,11 @@ async function cruxRank(data) {
   if (resp.status === 200) {
     const data = await resp.json();
     // TODO: check if this is actually correct for the latest date
-    if (data && data[1] && data[1][yyyymm]) {
-      const [globalRank, localRank] = data[1][yyyymm];
-      rv.globalRank = globalRank;
-      rv.localRank = localRank;
+    if (data && data["ranks"] && data["ranks"][yyyymm]) {
+      const {global, local, core} = data["ranks"][yyyymm];
+      rv.globalRank = global;
+      rv.localRank = local;
+      rv.coreRank = core;
     }
   } else if (resp.status !== 404) {
     throw new Error(resp);
@@ -304,7 +305,7 @@ async function trancoRank(data) {
 
 
 function getCruxUrl(domain) {
-  return getRankUrl(domain, "jgraham.github.io", "crux-ranks/v2");
+  return getRankUrl(domain, "jgraham.github.io", "crux-ranks/v3");
 }
 
 function getTrancoUrl(domain) {
