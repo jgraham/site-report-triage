@@ -244,10 +244,10 @@ function getPriority(score, regression) {
 
   let webcompatPriority = "P3";
   let performanceImpact = "low";
-  if (totalScore > 750) {
+  if (totalScore >= 750) {
     webcompatPriority = "P1";
     performanceImpact = "high";
-  } else if (totalScore > 100) {
+  } else if (totalScore >= 100) {
     webcompatPriority = "P2";
     performanceImpact = "medium";
   }
