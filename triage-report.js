@@ -218,7 +218,7 @@ function getScore(rank, controls) {
 
   const interventionScore = parseFloat(controls.sitepatch.value);
 
-  const [rankScore, _] = getRankScore(rank);
+  const rankScore = controls.siteRankOverride.value != "none" ? getRankScore(rank, controls.siteRankOverride.value)[0] : parseFloat(controls.siteRankOverride);
 
   const totalScore = severityScore * interventionScore * rankScore;
 
@@ -373,6 +373,7 @@ class TriageSection extends Section {
       configuration: new SelectControl(state, "configuration"),
       affects: new SelectControl(state, "affects"),
       branch: new SelectControl(state, "branch"),
+      siteRankOverride: new SelectControl(state, "site-rank-override"),
       status: new SelectControl(state, "status"),
       outreach: new SelectControl(state, "outreach"),
       diagnosisTeam: new SelectControl(state, "diagnosis-team"),
@@ -472,6 +473,7 @@ class TriageSection extends Section {
                                  controls.affects,
                                  controls.branch,
                                  controls.diagnosisTeam,
+                                 controls.siteRankOverride,
                                  controls.score];
       const unsetUserStoryControls = [];
 
@@ -548,6 +550,7 @@ class TriageSection extends Section {
                            },
                            {control: controls.affects},
                            {control: controls.branch},
+                           {control: controls.siteRankOverride},
                            {control: controls.diagnosisTeam},
                            {control: controls.performanceImpactBrowser},
                            {control: controls.performanceImpactContent},

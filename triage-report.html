@@ -73,24 +73,42 @@
       <option data-state=performance value="performance">Performance
     </select>
 
-    <label for="configuration">Configuration</label>
-    <select id="configuration">
-      <option data-state=general value=1>General
-      <option data-state=common value=0.5>Specific but common
-      <option data-state=rare value=0.3>Rare
-    </select>
+    <p class=label>Affects</p>
+    <ul class="input-list-inline">
+      <li>
+        <label for="configuration">Configuration</label>
+        <select id="configuration">
+          <option data-state=general value=1>General
+          <option data-state=common value=0.5>Specific but common
+          <option data-state=rare value=0.3>Rare
+        </select>
+      </li>
 
-    <label for="affects">Affects users</label>
-    <select id="affects">
-      <option data-state=all value=1>All
-      <option data-state=some value=0.3>Some
-      <option data-state=few value=0.1>Few
-    </select>
+      <li>
+        <label for="affects">Site Users</label>
+        <select id="affects">
+          <option data-state=all value=1>All
+          <option data-state=some value=0.3>Some
+          <option data-state=few value=0.1>Few
+        </select>
+      </li>
+    </ul>
 
     <label for="branch">Release Branch</label>
     <select id="branch">
       <option data-state=release value=1>Release (or Beta / Nightly)
       <option data-state=esr value=0.5>ESR Only
+    </select>
+
+    <label for="site-rank-override">Site Rank Override</label>
+    <select id="site-rank-override" data-serialize-options="no-default">
+      <option data-state=none value=1>None
+      <option data-state=global-1k value=15>Global Top 1k
+      <option data-state=core-1k value=10>Core Countries Top 1k
+      <option data-state=local-1k value=5>Local Top 1k
+      <option data-state=global-10k value=7.5>Global Top 10k
+      <option data-state=core-10k value=5>Core Countries Top 10k
+      <option data-state=local-10k value=2.5>Local Top 10k
     </select>
   </div>
 
