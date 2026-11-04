@@ -150,7 +150,6 @@ async function createBugzillaBug(data) {
   const user = await ensureUser();
 
   const bugzillaRequest = {
-    api_key: user.bugzilla_key,
     product,
     component,
     type: bugType,
@@ -178,7 +177,8 @@ async function createBugzillaBug(data) {
     method: 'POST',
     body: JSON.stringify(bugzillaRequest),
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-Bugzilla-API-Key": user.bugzilla_key
     }
   });
 
